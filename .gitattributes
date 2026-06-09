@@ -1,0 +1,68 @@
+## Ignore files and folders from GitHub release ZIP
+# Git files
+.gitattributes export-ignore
+.gitignore export-ignore
+.git/ export-ignore
+.github/ export-ignore
+
+# Development files
+.cursorrules export-ignore
+phpcs.xml.dist export-ignore
+
+# Composer files
+composer.json export-ignore
+composer.lock export-ignore
+# vendor/ export-ignore
+
+# Documentation
+readme.md export-ignore
+docs/ export-ignore
+
+# Testing and development tools
+.phpcs.xml export-ignore
+.phpcs.xml.dist export-ignore
+phpstan.neon export-ignore
+phpstan.neon.dist export-ignore
+tests/ export-ignore
+coverage/ export-ignore
+
+# Build and dependency directories
+node_modules/ export-ignore
+bower_components/ export-ignore
+dist/ export-ignore
+#build/ export-ignore
+webpack/ export-ignore
+
+# OS generated files
+.DS_Store export-ignore
+.DS_Store? export-ignore
+._* export-ignore
+.Spotlight-V100 export-ignore
+.Trashes export-ignore
+ehthumbs.db export-ignore
+Thumbs.db export-ignore
+
+# Package files
+package.json export-ignore
+package-lock.json export-ignore
+yarn.lock export-ignore
+bower.json export-ignore
+.npmrc export-ignore
+.yarnrc export-ignore
+
+# Build tools
+Gruntfile.js export-ignore
+gulpfile.js export-ignore
+webpack.config.js export-ignore
+rollup.config.js export-ignore
+postcss.config.js export-ignore
+babel.config.js export-ignore
+.eslintrc export-ignore
+.eslintrc.js export-ignore
+.eslintrc.json export-ignore
+.prettierrc export-ignore
+.prettierrc.js export-ignore
+.prettierrc.json export-ignore
+.stylelintrc export-ignore
+.stylelintrc.js export-ignore
+.stylelintrc.json export-ignore 

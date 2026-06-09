@@ -1,0 +1,175 @@
+<?xml version="1.0"?>
+<ruleset name="WordPress Coding Standards">
+    <description>Apply WordPress Coding Standards to all Core files</description>
+
+    <!-- ======================= -->
+    <!--     Execution Config     -->
+    <!-- ======================= -->
+    <arg name="colors"/>
+     <arg name="report" value="full"/>
+    <arg value="ps"/>
+    <arg name="basepath" value="./"/>
+    <arg name="parallel" value="20"/>
+    <arg name="cache"/>
+    <arg name="extensions" value="php"/>
+
+    <!-- ======================= -->
+    <!--      File Handling      -->
+    <!-- ======================= -->
+    <file>.</file>
+
+    <!-- Exclude directories and file types -->
+    <exclude-pattern>^build/*</exclude-pattern>
+    <exclude-pattern>^assets/*</exclude-pattern>
+    <exclude-pattern>vendor/*</exclude-pattern>
+    <exclude-pattern>node_modules/*</exclude-pattern>
+    <exclude-pattern>tests/*</exclude-pattern>
+    <exclude-pattern>*.min.js</exclude-pattern>
+    <exclude-pattern>*.css</exclude-pattern>
+
+    <!-- https://github.com/WordPress/WordPress-Coding-Standards/wiki/Customizable-sniff-properties -->
+    <!-- ======================= -->
+    <!--  WordPress Core Config  -->
+    <!-- ======================= -->
+    <config name="minimum_supported_wp_version" value="5.5"/>
+    <config name="testVersion" value="7.4-"/>
+
+    <!-- ======================= -->
+    <!--      Core Standards     -->
+    <!-- ======================= -->
+    <rule ref="WordPress-Core"/>
+    <rule ref="WooCommerce-Core"/>
+    <rule ref="WordPress-Extra"/>
+    <rule ref="WordPress-Docs"/>
+
+    <rule ref="WordPress">
+        <!-- Allow PSR-4 compatible filenames -->
+        <exclude name="WordPress.Files.FileName"/>
+
+        <!-- Allow non-Yoda conditions -->
+        <exclude name="WordPress.PHP.YodaConditions"/>
+
+        <!-- Allow camelCase method names -->
+        <exclude name="WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid"/>
+    </rule>
+
+    <rule ref="WordPress.Files.FileName">
+    	<properties>
+    		<property name="is_theme" value="true"/>
+    	</properties>
+    </rule>
+
+    <!-- ======================= -->
+    <!--  Security & Sanitization -->
+    <!-- ======================= -->
+    <rule ref="WordPress.Security.EscapeOutput">
+        <properties>
+            <property name="customAutoEscapedFunctions" type="array">
+                <element value="wp_kses"/>
+                <element value="esc_html"/>
+                <element value="esc_attr"/>
+                <element value="esc_url"/>
+                <element value="wp_json_encode"/>
+                <element value="__"/>
+                <element value="_e"/>
+                <element value="esc_html__"/>
+                <element value="esc_html_e"/>
+                <element value="esc_attr__"/>
+                <element value="esc_attr_e"/>
+            </property>
+        </properties>
+    </rule>
+
+    <rule ref="WordPress.DB.PreparedSQL"/>
+    <rule ref="WordPress.Security.NonceVerification"/>
+    <rule ref="WordPress.Security.ValidatedSanitizedInput"/>
+
+    <!-- ======================= -->
+    <!--  Internationalization   -->
+    <!-- ======================= -->
+    <rule ref="WordPress.WP.I18n">
+        <properties>
+            <property name="text_domain" type="array">
+                <element value="entire-account-manager"/>
+            </property>
+        </properties>
+    </rule>
+
+    <!-- WordPress.Utils.I18nTextDomainFixer: replace a text_domain -->
+    <rule ref="WordPress.Utils.I18nTextDomainFixer">
+    	<properties>
+    		<property name="old_text_domain" type="array">
+    			<element value="vi-bonus-"/>
+    		</property>
+    		<property name="new_text_domain" value="entire-account-manager"/>
+    	</properties>
+    </rule>
+
+
+    <!-- ======================= -->
+    <!--  Naming Conventions    -->
+    <!-- ======================= -->
+    <rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+        <properties>
+            <property name="prefixes" type="array">
+                <element value="entire"/>
+                <element value="ENTIRE_"/>
+                <element value="eam_"/>
+            </property>
+        </properties>
+    </rule>
+
+    <!-- ======================= -->
+    <!--  WooCommerce Rules     -->
+    <!-- ======================= -->
+    <rule ref="WooCommerce-Core">
+        <rule ref="WordPress.WP.Capabilities.Unknown">
+            <properties>
+                <property name="custom_capabilities" type="array">
+                    <element value="manage_woocommerce"/>
+                    <element value="dokandar"/>
+                </property>
+            </properties>
+        </rule>
+    </rule>
+
+    <!-- Allow author, copyright, license tags -->
+    <rule ref="WooCommerce.Commenting.CommentTags">
+        <exclude name="WooCommerce.Commenting.CommentTags.AuthorTag"/>
+        <exclude name="WooCommerce.Commenting.CommentTags.CopyrightTag"/>
+        <exclude name="WooCommerce.Commenting.CommentTags.LicenseTag"/>
+    </rule>
+
+    <!-- ======================= -->
+    <!--  PHP Compatibility     -->
+    <!-- ======================= -->
+    <rule ref="PHPCompatibilityWP">
+        <include-pattern>*\.php$</include-pattern>
+    </rule>
+
+    <!-- ======================= -->
+    <!--  Code Quality          -->
+    <!-- ======================= -->
+    <rule ref="Generic.Metrics.CyclomaticComplexity">
+        <properties>
+            <property name="complexity" value="10"/>
+            <property name="absoluteComplexity" value="20"/>
+        </properties>
+    </rule>
+
+    <rule ref="Generic.Files.OneObjectStructurePerFile"/>
+
+    <!-- ============================ -->
+    <!--     Prevent Debug Functions  -->
+    <!-- ============================ -->
+    <rule ref="Generic.PHP.ForbiddenFunctions">
+        <properties>
+            <property name="forbiddenFunctions" type="array">
+                <element key="print_r" value="error_log"/>
+                <element key="var_dump" value="error_log"/>
+                <element key="dd" value="error_log"/>
+            </property>
+        </properties>
+    </rule>
+
+</ruleset>

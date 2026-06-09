@@ -1,0 +1,92 @@
+{
+    "name": "wpplugin/entire-account-manager",
+    "description": "Professional WordPress Plugin for Course Enrollment and Synchronization",
+    "version": "1.0.0",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "type": "wordpress-plugin",
+    "license": "MIT",
+    "scripts": {
+        "lint": "parallel-lint src --exclude vendor",
+        "check-style": [
+            "@phpcs",
+            "@phpstan"
+        ],
+        "fix-style": "@phpcbf",
+        "static-analysis": "phpstan analyse --memory-limit=1G",
+        "tests": "phpunit --coverage-html coverage",
+        "build": [
+            "@check-style",
+            "@static-analysis",
+            "@tests"
+        ],
+        "phpcs": "./vendor/bin/phpcs --standard=phpcs.xml.dist",
+        "phpcbf": "./vendor/bin/phpcbf --standard=phpcs.xml.dist",
+        "phpstan": "./vendor/bin/phpstan analyse",
+        "wp-install": "wp core download && wp config create --dbname=testdb --dbuser=root --dbpass=root",
+        "wp-activate": "wp plugin activate vi-enroll-course",
+        "ci": [
+            "@check-style",
+            "@static-analysis",
+            "@tests"
+        ],
+        "make-pot": "./vendor/bin/wp i18n make-pot . languages/$(basename \"$PWD\").pot --exclude=node_modules,vendor,tests,coverage,.git,assets/src"
+    },
+    "require-dev": {
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+        "lucatume/wp-browser": "^4.5",
+        "mockery/mockery": "^1.5",
+        "php-parallel-lint/php-parallel-lint": "^1.3",
+        "phpcompatibility/phpcompatibility-wp": "^2.1",
+        "phpcsstandards/phpcsutils": "^1.0",
+        "phpstan/phpstan": "^1.10",
+        "phpstan/phpstan-deprecation-rules": "^1.1",
+        "phpunit/phpunit": "^9.6",
+        "roave/security-advisories": "dev-latest",
+        "squizlabs/php_codesniffer": "^3.8",
+        "woocommerce/woocommerce-sniffs": "^1.0",
+        "wp-cli/i18n-command": "^2.7",
+        "wp-cli/wp-cli": "^2.8",
+        "wp-coding-standards/wpcs": "^3.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "EntireUserSync\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "EntireUserSync\\Tests\\": "tests/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Birendra Maharjan",
+            "email": "brendra8917@gmail.com",
+            "homepage": "https://maharjanbirendra.com.np",
+            "role": "Lead Developer"
+        }
+    ],
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true,
+            "composer/installers": true
+        },
+        "optimize-autoloader": true,
+        "sort-packages": true,
+        "platform-check": true,
+        "classmap-authoritative": true
+    },
+    "extra": {
+        "phpstan": {
+            "includes": [
+                "phpstan.neon.dist"
+            ]
+        },
+        "wp-browser": {
+            "wordpressVersion": "6.0",
+            "testDb": "tests_db",
+            "tablePrefix": "wp_"
+        }
+    }
+}
