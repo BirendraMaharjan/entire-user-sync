@@ -1,0 +1,49 @@
+{
+    "name":"codeception/module-db",
+    "description":"DB module for Codeception",
+    "keywords":["codeception", "db-testing", "database-testing"],
+    "homepage":"https://codeception.com/",
+    "type":"library",
+    "license":"MIT",
+    "authors":[
+        {
+            "name": "Michael Bodnarchuk"
+        },
+        {
+            "name": "Gintautas Miselis"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "php": "^8.0",
+        "ext-json": "*",
+        "ext-mbstring": "*",
+        "ext-pdo": "*",
+        "codeception/codeception": "*@dev"
+    },
+    "require-dev": {
+        "behat/gherkin": "~4.10.0",
+        "squizlabs/php_codesniffer": "*"
+    },
+    "conflict": {
+        "codeception/codeception": "<5.0"
+    },
+    "autoload":{
+        "classmap": ["src/"]
+    },
+    "autoload-dev": {
+        "classmap": ["tests/"]
+    },
+    "scripts": {
+        "cs-prod": "phpcs src/",
+        "cs-tests": "phpcs tests/ --standard=tests/phpcs.xml"
+    },
+    "scripts-descriptions": {
+        "cs-prod": "Check production code style",
+        "cs-tests": "Check test code style"
+    },
+    "config": {
+        "classmap-authoritative": true,
+        "sort-packages": true
+    }
+}

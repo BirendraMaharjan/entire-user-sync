@@ -9,7 +9,7 @@ yarn.lock
 pnpm-lock.yaml
 
 # Composer
-vendor
+# vendor
 composer.lock
 
 # PHP

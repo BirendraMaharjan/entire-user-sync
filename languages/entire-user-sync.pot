@@ -1,0 +1,455 @@
+# Copyright (C) 2026 Birendra Maharjan
+# This file is distributed under the GPL v2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Entire User Sync 1.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/entire-user-sync\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-06-09T10:03:52+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: entire-user-sync\n"
+
+#. Plugin Name of the plugin
+#: entire-user-sync.php:3
+#: src/Config/Plugin.php:124
+msgid "Entire User Sync"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: entire-user-sync.php:4
+msgid "https://github.com/BirendraMaharjan/vi-account-manager"
+msgstr ""
+
+#. Description of the plugin
+#: entire-user-sync.php:5
+msgid "Account Manager for WooCommerce."
+msgstr ""
+
+#. Author of the plugin
+#: entire-user-sync.php:9
+msgid "Birendra Maharjan"
+msgstr ""
+
+#. Author URI of the plugin
+#: entire-user-sync.php:10
+msgid "https://www.linkedin.com/in/birendramaharjan/"
+msgstr ""
+
+#: entire-user-sync.php:32
+msgid "Entire User Sync is missing Composer dependencies. Run composer install."
+msgstr ""
+
+#: src/Admin/Assets.php:137
+msgid "Reset all fields in this section to their defaults? This cannot be undone."
+msgstr ""
+
+#: src/Admin/Assets.php:138
+msgid "Section reset to defaults."
+msgstr ""
+
+#: src/Admin/Assets.php:139
+msgid "Reset failed. Please try again."
+msgstr ""
+
+#: src/Admin/Assets.php:140
+msgid "Select Image"
+msgstr ""
+
+#: src/Admin/Assets.php:141
+msgid "Use this image"
+msgstr ""
+
+#: src/Admin/Menus.php:52
+#: src/Admin/Menus.php:53
+#: src/Admin/Settings/Sections/Configuration.php:10
+msgid "Configuration"
+msgstr ""
+
+#: src/Admin/Menus.php:61
+#: src/Admin/Menus.php:62
+msgid "Overview"
+msgstr ""
+
+#: src/Admin/Menus.php:70
+#: src/Admin/Menus.php:71
+msgid "Logs"
+msgstr ""
+
+#: src/Admin/Menus.php:79
+#: src/Admin/Menus.php:80
+msgid "License"
+msgstr ""
+
+#: src/Admin/Menus.php:88
+#: src/Admin/Menus.php:89
+msgid "Help"
+msgstr ""
+
+#: src/Admin/Menus.php:110
+msgid "Settings"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:14
+msgid "Sync Roles"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:17
+msgid "Select roles to sync…"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:18
+msgid "Only users with these roles will be synchronised. Leave empty to sync all roles."
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:22
+msgid "Sync Meta Keys"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:25
+msgid "Select meta keys to sync…"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:26
+msgid "Choose which user meta fields to include in the sync payload."
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:30
+msgid "Sync Direction"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:33
+msgid "Push sends data from this site; Pull fetches from remotes."
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:35
+msgid "Push  (this site → remotes)"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:36
+msgid "Pull  (remotes → this site)"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:37
+msgid "Both"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:41
+msgid "Sync Trigger"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:44
+msgid "Select triggers…"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:45
+msgid "Events that trigger an automatic sync."
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:47
+msgid "User Registered"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:48
+msgid "Profile Updated"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:49
+msgid "User Deleted"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:50
+msgid "Role Changed"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:51
+msgid "User Login"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:55
+msgid "Conflict Strategy"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:58
+msgid "What to do when the same user exists on both sites with different data."
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:60
+msgid "Source always wins"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:61
+msgid "Target always wins"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:62
+msgid "Most recently modified wins"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:63
+msgid "Skip — do not overwrite"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:69
+msgid "Role Fallback"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:72
+msgid "Assign this role when the user's original role does not exist on the target site."
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:74
+msgid "Subscriber (recommended)"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:75
+msgid "Contributor"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:76
+msgid "Author"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:77
+msgid "Editor"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:78
+msgid "Skip — do not sync this user"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:79
+msgid "Sync without a role"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:84
+msgid "Role Map"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:87
+msgid "Add Mapping"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:88
+msgid "Map a source role to a different role on the target site when the original does not exist."
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:91
+msgid "Source Role"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:93
+msgid "e.g. shop_manager"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:96
+msgid "Target Role"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:98
+msgid "e.g. editor"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:103
+msgid "Batch Size"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:109
+msgid "Number of users processed per sync request."
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:112
+msgid "Enable Logging"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Configuration.php:115
+msgid "Write sync activity to the error log"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Integrations.php:10
+msgid "Integrations"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Integrations.php:15
+msgid "Secret Key"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Setup.php:10
+msgid "Setup"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Setup.php:14
+msgid "Enable Sync"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Setup.php:19
+msgid "Target Sites"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Setup.php:22
+msgid "Add Site"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Setup.php:23
+msgid "Add each remote WordPress site to sync users to."
+msgstr ""
+
+#: src/Admin/Settings/Sections/Setup.php:26
+msgid "Label"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Setup.php:28
+msgid "Site Name"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Setup.php:31
+msgid "URL"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Setup.php:36
+msgid "Active"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Setup.php:40
+msgid "Sign-On"
+msgstr ""
+
+#: src/Admin/Settings/Settings.php:366
+msgid "Select options..."
+msgstr ""
+
+#. translators: %s: unknown request type string
+#: src/Common/Traits/Requester.php:60
+#, php-format
+msgid "Unknown request type: \"%s\". Expected one of: installing_wp, frontend, admin, rest, cron, cli."
+msgstr ""
+
+#: src/Common/Traits/Singleton.php:42
+msgid "Cloning a singleton is not allowed."
+msgstr ""
+
+#: src/Common/Traits/Singleton.php:55
+msgid "Unserializing a singleton is not allowed."
+msgstr ""
+
+#: src/Sync/LogPage.php:29
+msgid "You do not have permission to prune sync logs."
+msgstr ""
+
+#: src/Sync/LogPage.php:70
+msgid "Log page template not found."
+msgstr ""
+
+#: templates/admin/pages/logs.php:15
+msgid "User Sync Log"
+msgstr ""
+
+#. Translators: 1: Number of deleted log rows, 2: Number of days.
+#: templates/admin/pages/logs.php:25
+#, php-format
+msgid "Pruned %1$d log rows older than %2$d days."
+msgstr ""
+
+#: templates/admin/pages/logs.php:38
+msgid "All Events"
+msgstr ""
+
+#: templates/admin/pages/logs.php:47
+msgid "Both Directions"
+msgstr ""
+
+#: templates/admin/pages/logs.php:49
+msgid "Outgoing"
+msgstr ""
+
+#: templates/admin/pages/logs.php:52
+msgid "Incoming"
+msgstr ""
+
+#: templates/admin/pages/logs.php:57
+msgid "All Statuses"
+msgstr ""
+
+#: templates/admin/pages/logs.php:59
+msgid "Success"
+msgstr ""
+
+#: templates/admin/pages/logs.php:62
+msgid "Error"
+msgstr ""
+
+#: templates/admin/pages/logs.php:69
+msgid "Filter by email"
+msgstr ""
+
+#: templates/admin/pages/logs.php:76
+msgid "Filter by site URL"
+msgstr ""
+
+#: templates/admin/pages/logs.php:84
+msgid "Filter"
+msgstr ""
+
+#: templates/admin/pages/logs.php:88
+msgid "Reset"
+msgstr ""
+
+#: templates/admin/pages/logs.php:94
+msgid "No log entries found."
+msgstr ""
+
+#: templates/admin/pages/logs.php:101
+msgid "ID"
+msgstr ""
+
+#: templates/admin/pages/logs.php:102
+msgid "Event"
+msgstr ""
+
+#: templates/admin/pages/logs.php:103
+msgid "Direction"
+msgstr ""
+
+#: templates/admin/pages/logs.php:104
+msgid "User"
+msgstr ""
+
+#: templates/admin/pages/logs.php:105
+msgid "From"
+msgstr ""
+
+#: templates/admin/pages/logs.php:106
+msgid "To"
+msgstr ""
+
+#: templates/admin/pages/logs.php:107
+msgid "Status"
+msgstr ""
+
+#: templates/admin/pages/logs.php:108
+msgid "Message"
+msgstr ""
+
+#: templates/admin/pages/logs.php:109
+msgid "Time (UTC)"
+msgstr ""
+
+#: templates/admin/pages/logs.php:110
+msgid "Payload"
+msgstr ""
+
+#: templates/admin/pages/logs.php:175
+msgid "Prune Old Logs"
+msgstr ""
+
+#: templates/admin/pages/logs.php:182
+msgid "Delete entries older than"
+msgstr ""
+
+#: templates/admin/pages/logs.php:187
+msgid "Prune Now"
+msgstr ""

@@ -20,17 +20,10 @@ class Sender {
 
 		$results = array();
 
-		foreach ( $this->get_sites() as $site ) {
+		foreach ( $this->get_active_sites() as $site ) {
 
-			$response = array(
-				'status'  => 'not_active',
-				'message' => __(  'Target site is inactive.' , 'entire-user-sync' ),
-			);
-
-			if ( $site['active'] === '1' ) {
-				$response = $this->send_request( $this->endpoint( $site, 'sync-user' ), $payload );
-				$results[ $this->site_key( $site ) ] = $response;
-			}
+			$response = $this->send_request( $this->endpoint( $site, 'sync-user' ), $payload );
+			$results[ $this->site_key( $site ) ] = $response;
 
 			$this->write_log(
 				array(
@@ -86,8 +79,9 @@ class Sender {
 	public function delete_user( string $email, array $sites ): array {
 		$results = array();
 
-		foreach ( $sites as $site ) {
-			$response                            = $this->send_request(
+		foreach ( $this->get_active_sites() as $site ) {
+
+			$response = $this->send_request(
 				$this->endpoint( $site, 'delete-user' ),
 				array( 'email' => $email ),
 				'DELETE'

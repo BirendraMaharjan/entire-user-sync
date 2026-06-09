@@ -29,7 +29,7 @@ class Sync extends Base {
 		add_action( 'user_register', array( $this, 'maybe_auto_sync_user' ) );
 		add_action( 'profile_update', array( $this, 'maybe_auto_sync_user' ) );
 
-		add_action( 'set_user_role', array( $this, 'maybe_auto_sync_user_role' ), 10, 3 );
+		add_action( 'set_user_role', array( $this, 'maybe_auto_sync_user_role' ) );
 
 		add_action( 'delete_user', array( $this, 'maybe_auto_delete_user' ) );
 		add_action( 'remove_user_from_blog', array( $this, 'maybe_auto_delete_user' ) );
@@ -90,12 +90,12 @@ class Sync extends Base {
 		$this->sender->sync_user( $user_id );
 	}
 
-	public function maybe_auto_sync_user_role( int $user_id, $role = null, $old_roles = null ): void {
+	public function maybe_auto_sync_user_role( int $user_id ): void {
 		$this->maybe_auto_sync_user( $user_id );
 	}
 
 	public function maybe_auto_delete_user( int $user_id ): void {
-		if ( ! $this->auto_sync() ) {
+		if ( ! $this->allow_sync( $user_id ) ) {
 			return;
 		}
 		$user = get_userdata( $user_id );

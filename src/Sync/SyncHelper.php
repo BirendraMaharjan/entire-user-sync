@@ -45,6 +45,19 @@ trait SyncHelper {
 		return $this->settings()->get( 'setup', 'sites' ) ?? array();
 	}
 
+	public function get_active_sites(): array {
+		$sites = $this->get_sites();
+
+		return array_values(
+			array_filter(
+				$sites,
+				function ( $site ) {
+					return isset( $site['active'] ) && '1' === $site['active'];
+				}
+			)
+		);
+	}
+
 	public function get_roles(): array {
 		return $this->settings()->get( 'configuration', 'roles' ) ?? array();
 	}

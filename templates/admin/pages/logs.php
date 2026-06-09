@@ -21,6 +21,7 @@ extract( $view, EXTR_SKIP );
 			<p>
 				<?php
 				printf(
+					/* Translators: 1: Number of deleted log rows, 2: Number of days. */
 					esc_html__( 'Pruned %1$d log rows older than %2$d days.', 'entire-user-sync' ),
 					absint( $deleted ),
 					absint( $days )
