@@ -30,7 +30,7 @@
             "@static-analysis",
             "@tests"
         ],
-        "make-pot": "./vendor/bin/wp i18n make-pot . languages/$(basename \"$PWD\").pot --exclude=node_modules,vendor,.git,assets/src"
+        "make-pot": ""
     },
     "require-dev": {
         "dealerdirect/phpcodesniffer-composer-installer": "*",
