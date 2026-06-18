@@ -4,6 +4,7 @@ namespace EntireUserSync\Admin\Settings;
 
 use EntireUserSync\Common\Abstracts\Base;
 
+defined( 'ABSPATH' ) || exit;
 
 class Settings extends Base {
 
@@ -23,7 +24,6 @@ class Settings extends Base {
 
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 
-
 		add_action( 'wp_ajax_your_plugin_reset_section', array( $this, 'ajax_reset_section' ) );
 	}
 
@@ -31,14 +31,15 @@ class Settings extends Base {
 		if ( empty( $this->sections ) ) {
 			$this->sections = $this->get_sections();
 		}
+
 		return $this->sections;
 	}
 
 	public function get_sections() {
 		return array_merge(
-			new Sections\Setup()->get(),
-			new Sections\Configuration()->get(),
-			new Sections\Integrations()->get(),
+			( new Sections\Setup() )->get(),
+			( new Sections\Configuration() )->get(),
+			( new Sections\Integrations() )->get(),
 		);
 	}
 
@@ -259,22 +260,22 @@ class Settings extends Base {
 
 
 	public function render_field( $args ) {
-		$option_name = $args['option_name'];
-		$field_key   = $args['field_key'];
-		$field       = $args['field'];
-		$options     = get_option( $option_name, array() );
-		$value       = $options[ $field_key ] ?? $field['default'];
-		$type        = $field['type'] ?? 'text';
-		$name        = esc_attr( $option_name ) . '[' . esc_attr( $field_key ) . ']';
-		$id          = esc_attr( $field_key );
+		$option_name        = $args['option_name'];
+		$field_key          = $args['field_key'];
+		$field              = $args['field'];
+		$options            = get_option( $option_name, array() );
+		$value              = $options[ $field_key ] ?? $field['default'];
+		$type               = $field['type'] ?? 'text';
+		$name               = esc_attr( $option_name ) . '[' . esc_attr( $field_key ) . ']';
+		$id                 = esc_attr( $field_key );
 
 		switch ( $type ) {
 
 			case 'textarea':
 				printf(
 					'<textarea id="%1$s" name="%2$s" rows="%3$d" class="large-text">%4$s</textarea>',
-					$id,
-					$name,
+					esc_attr( $id ),
+					esc_attr( $name ),
 					isset( $field['rows'] ) ? absint( $field['rows'] ) : 5,
 					esc_textarea( $value )
 				);
@@ -283,10 +284,10 @@ class Settings extends Base {
 			case 'checkbox':
 				printf(
 					'<label><input type="checkbox" id="%1$s" name="%2$s" value="1" %3$s /> %4$s</label>',
-					$id,
-					$name,
+					esc_attr( $id ),
+					esc_attr( $name ),
 					checked( $value, '1', false ),
-					isset( $field['checkbox_label'] ) ? esc_html( $field['checkbox_label'] ) : esc_html__( 'Enable', 'your-plugin' )
+					isset( $field['checkbox_label'] ) ? esc_html( $field['checkbox_label'] ) : esc_html__( 'Enable', 'entire-user-sync' )
 				);
 				break;
 
@@ -296,7 +297,7 @@ class Settings extends Base {
 						'<label style="display:block;margin-bottom:5px;">
 							<input type="radio" name="%1$s" value="%2$s" %3$s /> %4$s
 						</label>',
-						$name,
+						esc_attr( $name ),
 						esc_attr( $opt_value ),
 						checked( $value, $opt_value, false ),
 						esc_html( $opt_label )
@@ -305,7 +306,11 @@ class Settings extends Base {
 				break;
 
 			case 'select':
-				printf( '<select id="%1$s" name="%2$s">', $id, $name );
+				printf(
+					'<select id="%1$s" name="%2$s">',
+					esc_attr( $id ),
+					esc_attr( $name )
+				);
 				foreach ( $field['options'] as $opt_value => $opt_label ) {
 					printf(
 						'<option value="%1$s" %2$s>%3$s</option>',
@@ -321,8 +326,8 @@ class Settings extends Base {
 				$value = is_array( $value ) ? $value : array();
 				printf(
 					'<select id="%1$s" name="%2$s[]" multiple="multiple" size="%3$d" style="min-width:200px;">',
-					$id,
-					$name,
+					esc_attr( $id ),
+					esc_attr( $name ),
 					isset( $field['size'] ) ? absint( $field['size'] ) : 5
 				);
 				foreach ( $field['options'] as $opt_value => $opt_label ) {
@@ -340,9 +345,9 @@ class Settings extends Base {
 
 				printf(
 					'<select id="%s" name="%s[]" multiple="multiple" class="your-plugin-select2" style="width:100%%;max-width:25em;" data-placeholder="%s">',
-					$id,
+					esc_attr( $id ),
 					esc_attr( $name ),
-					isset( $field['placeholder'] ) ? esc_attr( $field['placeholder'] ) : esc_attr__( 'Select options...', 'your-plugin' )
+					isset( $field['placeholder'] ) ? esc_attr( $field['placeholder'] ) : esc_attr__( 'Select options...', 'entire-user-sync' )
 				);
 
 				foreach ( $field['options'] as $opt_val => $opt_label ) {
@@ -361,7 +366,7 @@ class Settings extends Base {
 
 				printf(
 					'<select id="%s" name="%s[]" multiple="multiple" class="your-plugin-select2" style="width:100%%;max-width:25em;" data-placeholder="%s">',
-					$id,
+					esc_attr( $id ),
 					esc_attr( $name ),
 					isset( $field['placeholder'] ) ? esc_attr( $field['placeholder'] ) : esc_attr__( 'Select options...', 'entire-user-sync' )
 				);
@@ -387,8 +392,8 @@ class Settings extends Base {
 			case 'number':
 				printf(
 					'<input type="number" id="%1$s" name="%2$s" value="%3$s" min="%4$s" max="%5$s" step="%6$s" class="small-text" />',
-					$id,
-					$name,
+					esc_attr( $id ),
+					esc_attr( $name ),
 					esc_attr( $value ),
 					isset( $field['min'] ) ? esc_attr( $field['min'] ) : '0',
 					isset( $field['max'] ) ? esc_attr( $field['max'] ) : '',
@@ -399,8 +404,8 @@ class Settings extends Base {
 			case 'email':
 				printf(
 					'<input type="email" id="%1$s" name="%2$s" value="%3$s" class="regular-text" />',
-					$id,
-					$name,
+					esc_attr( $id ),
+					esc_attr( $name ),
 					esc_attr( $value )
 				);
 				break;
@@ -408,8 +413,8 @@ class Settings extends Base {
 			case 'url':
 				printf(
 					'<input type="url" id="%1$s" name="%2$s" value="%3$s" class="regular-text" />',
-					$id,
-					$name,
+					esc_attr( $id ),
+					esc_attr( $name ),
 					esc_url( $value )
 				);
 				break;
@@ -417,8 +422,8 @@ class Settings extends Base {
 			case 'password':
 				printf(
 					'<input type="password" id="%1$s" name="%2$s" value="%3$s" class="regular-text" autocomplete="new-password" />',
-					$id,
-					$name,
+					esc_attr( $id ),
+					esc_attr( $name ),
 					esc_attr( $value )
 				);
 				break;
@@ -426,8 +431,8 @@ class Settings extends Base {
 			case 'color':
 				printf(
 					'<input type="color" id="%1$s" name="%2$s" value="%3$s" />',
-					$id,
-					$name,
+					esc_attr( $id ),
+					esc_attr( $name ),
 					esc_attr( $value )
 				);
 				break;
@@ -446,40 +451,40 @@ class Settings extends Base {
 
 			case 'image':
 				$attachment_id = absint( $value );
-				$img_url       = $attachment_id ? wp_get_attachment_image_url( $attachment_id, 'thumbnail' ) : '';
+				$img_url    = $attachment_id ? wp_get_attachment_image_url( $attachment_id, 'thumbnail' ) : '';
 				?>
-				<div class="your-plugin-image-field" data-field="<?php echo $id; ?>">
+				<div class="your-plugin-image-field" data-field="<?php echo esc_attr( $id ); ?>">
 					<input type="hidden"
-							id="<?php echo $id; ?>"
-							name="<?php echo $name; ?>"
-							value="<?php echo esc_attr( $attachment_id ); ?>"/>
+					       id="<?php echo esc_attr( $id ); ?>"
+					       name="<?php echo esc_attr( $name ); ?>"
+					       value="<?php echo esc_attr( $attachment_id ); ?>"/>
 
 					<div class="your-plugin-image-preview">
 						<?php if ( $img_url ) : ?>
 							<img src="<?php echo esc_url( $img_url ); ?>"
-								style="max-width:150px;display:block;margin-bottom:8px;" alt=""/>
+							     style="max-width:150px;display:block;margin-bottom:8px;" alt=""/>
 						<?php endif; ?>
 					</div>
 
 					<button type="button"
-							class="button your-plugin-upload-image"
-							data-field="<?php echo $id; ?>">
-						<?php esc_html_e( 'Upload Image', 'your-plugin' ); ?>
+					        class="button your-plugin-upload-image"
+					        data-field="<?php echo esc_attr( $id ); ?>">
+						<?php esc_html_e( 'Upload Image', 'entire-user-sync' ); ?>
 					</button>
 
 					<?php if ( $attachment_id ) : ?>
 						<button type="button"
-								class="button your-plugin-remove-image"
-								data-field="<?php echo $id; ?>"
-								style="margin-left:4px;">
-							<?php esc_html_e( 'Remove', 'your-plugin' ); ?>
+						        class="button your-plugin-remove-image"
+						        data-field="<?php echo esc_attr( $id ); ?>"
+						        style="margin-left:4px;">
+							<?php esc_html_e( 'Remove', 'entire-user-sync' ); ?>
 						</button>
 					<?php endif; ?>
 				</div>
 				<?php
 				break;
 			case 'repeater':
-				$rows       = is_array( $value ) ? $value : array();
+				$rows = is_array( $value ) ? $value : array();
 				$sub_fields = $field['sub_fields'] ?? array();
 				$name_base  = $option_name . '[' . $field_key . ']';
 				?>
@@ -501,8 +506,8 @@ class Settings extends Base {
 					</div>
 
 					<button type="button" class="button your-plugin-add-row"
-							data-sub-fields="<?php echo esc_attr( wp_json_encode( $sub_fields ) ); ?>">
-						+ <?php echo esc_html( isset( $field['add_label'] ) ? $field['add_label'] : __( 'Add Row', 'your-plugin' ) ); ?>
+					        data-sub-fields="<?php echo esc_attr( wp_json_encode( $sub_fields ) ); ?>">
+						+ <?php echo esc_html( isset( $field['add_label'] ) ? $field['add_label'] : __( 'Add Row', 'entire-user-sync' ) ); ?>
 					</button>
 
 				</div>
@@ -513,8 +518,8 @@ class Settings extends Base {
 				printf(
 					'<input type="%1$s" id="%2$s" name="%3$s" value="%4$s" class="regular-text" />',
 					esc_attr( $type ),
-					$id,
-					$name,
+					esc_attr( $id ),
+					esc_attr( $name ),
 					esc_attr( $value )
 				);
 				break;
@@ -597,13 +602,13 @@ class Settings extends Base {
 		check_ajax_referer( 'entire_nonce', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'your-plugin' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'entire-user-sync' ) ) );
 		}
 
 		$section = isset( $_POST['section'] ) ? sanitize_key( $_POST['section'] ) : '';
 
 		if ( ! isset( $this->sections()[ $section ] ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid section.', 'your-plugin' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Invalid section.', 'entire-user-sync' ) ) );
 		}
 
 		$defaults = array();
@@ -624,7 +629,7 @@ class Settings extends Base {
 		$active_tab = sanitize_key( $_GET['tab'] ?? array_key_first( $this->sections() ) );
 		?>
 		<nav class="nav-tab-wrapper wp-clearfix">
-		<?php foreach ( $this->sections() as $key => $section ) : ?>
+			<?php foreach ( $this->sections() as $key => $section ) : ?>
 				<a
 					href="<?php echo esc_url( $this->get_tab_url( $key ) ); ?>"
 					class="nav-tab<?php echo $active_tab === $key ? ' nav-tab-active' : ''; ?>"
@@ -686,7 +691,8 @@ class Settings extends Base {
 			return $option[ $field ];
 		}
 
-		/*echo "<pre>";
+		/*
+		echo "<pre>";
 		echo print_r( $option );
 		echo "</pre>";*/
 

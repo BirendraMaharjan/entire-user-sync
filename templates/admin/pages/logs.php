@@ -3,7 +3,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-$log = new \EntireUserSync\Sync\LogPage();
+$log  = new \EntireUserSync\Sync\LogPage();
 $view = $log->prepare_view();
 
 

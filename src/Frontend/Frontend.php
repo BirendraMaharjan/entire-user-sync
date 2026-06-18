@@ -30,29 +30,6 @@ class Frontend extends Base {
 	 * @since 1.0.0
 	 */
 	public function init(): void {
-		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
-	}
-
-	/**
-	 * Enqueue public stylesheet and script.
-	 *
-	 * @return void
-	 * @since 1.0.0
-	 */
-	public function enqueue_assets(): void {
-		wp_enqueue_style(
-			$this->plugin->slug(),
-			$this->plugin->url() . '/assets/css/frontend.css',
-			array(),
-			$this->plugin->version()
-		);
-
-		wp_enqueue_script(
-			$this->plugin->slug(),
-			$this->plugin->url() . '/assets/js/frontend.js',
-			array(),
-			$this->plugin->version(),
-			true
-		);
+		new Assets()->init();
 	}
 }

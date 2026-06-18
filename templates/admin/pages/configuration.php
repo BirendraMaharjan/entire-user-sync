@@ -4,6 +4,8 @@
  *
  * @package EntireUserSync
  */
+
+defined( 'ABSPATH' ) || exit;
 ?>
 <div class="entire-admin-navigation">
 	<nav class="nav-tab-wrapper wp-clearfix">
@@ -35,7 +37,7 @@
 				<?php do_settings_sections( 'your-plugin-settings-' . $section_key ); ?>
 
 				<div class="your-plugin-section-footer">
-					<?php submit_button( __( 'Save Changes', 'your-plugin' ), 'primary', 'submit', false ); ?>
+					<?php submit_button( __( 'Save Changes', 'entire-user-sync' ), 'primary', 'submit', false ); ?>
 
 					<button
 						type="button"
@@ -43,7 +45,7 @@
 						data-section="<?php echo esc_attr( $section_key ); ?>"
 					>
 						<span class="dashicons dashicons-image-rotate"></span>
-						<?php esc_html_e( 'Reset Default', 'your-plugin' ); ?>
+						<?php esc_html_e( 'Reset Default', 'entire-user-sync' ); ?>
 					</button>
 
 					<span class="your-plugin-reset-notice"></span>

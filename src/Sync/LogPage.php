@@ -31,7 +31,7 @@ class LogPage extends Base {
 
 		check_admin_referer( 'entireus_prune', 'entireus_prune_nonce' );
 
-		$days     = max( 0, absint( wp_unslash( $_POST['prune_days'] ?? 90 ) ) );
+		$days = max( 0, absint( wp_unslash( $_POST['prune_days'] ?? 90 ) ) );
 
 		$deleted  = Logger::prune( $days );
 		$redirect = wp_get_referer();
@@ -86,7 +86,7 @@ class LogPage extends Base {
 			'deleted'      => absint( wp_unslash( $_GET['entireus_deleted'] ?? 0 ) ),
 			'filters'      => $filters,
 			'notice'       => sanitize_key( wp_unslash( $_GET['entireus_log_notice'] ?? '' ) ),
-			'paged'         => $filters['paged'],
+			'paged'        => $filters['paged'],
 			'page_slug'    => $this->menu_slug(),
 			'pages'        => $result['pages'],
 			'prune_action' => self::PRUNE_ACTION,
@@ -105,7 +105,7 @@ class LogPage extends Base {
 			'date_from'  => sanitize_text_field( wp_unslash( $_GET['date_from'] ?? '' ) ),
 			'date_to'    => sanitize_text_field( wp_unslash( $_GET['date_to'] ?? '' ) ),
 			'per_page'   => self::DEFAULT_PER_PAGE,
-			'paged'       => max( 1, absint( wp_unslash( $_GET['paged'] ?? 1 ) ) ),
+			'paged'      => max( 1, absint( wp_unslash( $_GET['paged'] ?? 1 ) ) ),
 		);
 	}
 
@@ -145,112 +145,112 @@ class LogPage extends Base {
 	public function render_assets(): void {
 		?>
 		<style>
-            #entireus-log-wrap .title-count {
-                display: inline-block;
-                font-size: 13px;
-                background: #ddd;
-                border-radius: 10px;
-                padding: 2px 8px;
-                margin-left: 8px;
-                vertical-align: middle;
-            }
+			#entireus-log-wrap .title-count {
+				display: inline-block;
+				font-size: 13px;
+				background: #ddd;
+				border-radius: 10px;
+				padding: 2px 8px;
+				margin-left: 8px;
+				vertical-align: middle;
+			}
 
-            .entireus-filters {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 6px;
-                align-items: center;
-                margin: 12px 0;
-            }
+			.entireus-filters {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 6px;
+				align-items: center;
+				margin: 12px 0;
+			}
 
-            .entireus-filters input, .entireus-filters select {
-                height: 30px;
-                font-size: 13px;
-            }
+			.entireus-filters input, .entireus-filters select {
+				height: 30px;
+				font-size: 13px;
+			}
 
-            .entireus-badge {
-                display: inline-block;
-                color: #fff;
-                font-size: 10px;
-                font-weight: 700;
-                padding: 2px 6px;
-                border-radius: 3px;
-                letter-spacing: .5px;
-            }
+			.entireus-badge {
+				display: inline-block;
+				color: #fff;
+				font-size: 10px;
+				font-weight: 700;
+				padding: 2px 6px;
+				border-radius: 3px;
+				letter-spacing: .5px;
+			}
 
-            .entireus-site-cell {
-                max-width: 160px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-            }
+			.entireus-site-cell {
+				max-width: 160px;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
 
-            .entireus-log-table td {
-                vertical-align: middle;
-            }
+			.entireus-log-table td {
+				vertical-align: middle;
+			}
 
-            .entireus-prune-form {
-                margin-top: 30px;
-                padding: 16px;
-                background: #fff;
-                border: 1px solid #ddd;
-                max-width: 400px;
-            }
+			.entireus-prune-form {
+				margin-top: 30px;
+				padding: 16px;
+				background: #fff;
+				border: 1px solid #ddd;
+				max-width: 400px;
+			}
 
-            #entireus-modal {
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, .6);
-                z-index: 99999;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
+			#entireus-modal {
+				position: fixed;
+				inset: 0;
+				background: rgba(0, 0, 0, .6);
+				z-index: 99999;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
 
-            #entireus-modal-inner {
-                background: #fff;
-                border-radius: 6px;
-                padding: 20px 24px;
-                max-width: 700px;
-                width: 90%;
-                max-height: 80vh;
-                overflow: auto;
-                position: relative;
-            }
+			#entireus-modal-inner {
+				background: #fff;
+				border-radius: 6px;
+				padding: 20px 24px;
+				max-width: 700px;
+				width: 90%;
+				max-height: 80vh;
+				overflow: auto;
+				position: relative;
+			}
 
-            #entireus-modal-close {
-                position: absolute;
-                top: 10px;
-                right: 12px;
-                background: none;
-                border: none;
-                font-size: 18px;
-                cursor: pointer;
-                line-height: 1;
-            }
+			#entireus-modal-close {
+				position: absolute;
+				top: 10px;
+				right: 12px;
+				background: none;
+				border: none;
+				font-size: 18px;
+				cursor: pointer;
+				line-height: 1;
+			}
 
-            #entireus-modal-body {
-                font-size: 12px;
-                white-space: pre-wrap;
-                word-break: break-all;
-                margin-top: 10px;
-            }
+			#entireus-modal-body {
+				font-size: 12px;
+				white-space: pre-wrap;
+				word-break: break-all;
+				margin-top: 10px;
+			}
 
-            .tablenav-pages a,
-            .tablenav-pages .current {
-                display: inline-block;
-                padding: 3px 8px;
-                border: 1px solid #ccc;
-                border-radius: 3px;
-                margin: 2px;
-                text-decoration: none;
-            }
+			.tablenav-pages a,
+			.tablenav-pages .current {
+				display: inline-block;
+				padding: 3px 8px;
+				border: 1px solid #ccc;
+				border-radius: 3px;
+				margin: 2px;
+				text-decoration: none;
+			}
 
-            .tablenav-pages .current {
-                background: #0073aa;
-                color: #fff;
-                border-color: #0073aa;
-            }
+			.tablenav-pages .current {
+				background: #0073aa;
+				color: #fff;
+				border-color: #0073aa;
+			}
 		</style>
 		<script>
 			(

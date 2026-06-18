@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Class Admin
  *
- * Boots all wp-admin sub-modules.
+ * Boots all wp-admin submodules.
  *
  * @since 1.0.0
  */

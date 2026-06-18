@@ -7,6 +7,7 @@ use WP_User;
 class Sender {
 
 	use SyncHelper;
+
 	private string $secret;
 
 	public function __construct() {
@@ -22,7 +23,7 @@ class Sender {
 
 		foreach ( $this->get_active_sites() as $site ) {
 
-			$response = $this->send_request( $this->endpoint( $site, 'sync-user' ), $payload );
+			$response                            = $this->send_request( $this->endpoint( $site, 'sync-user' ), $payload );
 			$results[ $this->site_key( $site ) ] = $response;
 
 			$this->write_log(
@@ -81,7 +82,7 @@ class Sender {
 
 		foreach ( $this->get_active_sites() as $site ) {
 
-			$response = $this->send_request(
+			$response                            = $this->send_request(
 				$this->endpoint( $site, 'delete-user' ),
 				array( 'email' => $email ),
 				'DELETE'

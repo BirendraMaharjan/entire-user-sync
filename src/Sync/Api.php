@@ -81,7 +81,7 @@ class Api {
 			define( 'ENTIREUS_INCOMING_SYNC', true );
 		}
 
-		$secret = $this->secret;
+		$secret    = $this->secret;
 		$signature = $request->get_header( 'X-EntireUS-Signature' );
 		$body      = $request->get_body();
 

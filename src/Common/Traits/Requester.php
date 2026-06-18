@@ -86,9 +86,9 @@ trait Requester {
 	 */
 	public function is_frontend(): bool {
 		return ! $this->is_admin_backend()
-		       && ! $this->is_rest()
-		       && ! $this->is_cron()
-		       && ! $this->is_cli();
+				&& ! $this->is_rest()
+				&& ! $this->is_cron()
+				&& ! $this->is_cli();
 	}
 
 	/**

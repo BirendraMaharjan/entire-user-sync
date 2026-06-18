@@ -7,7 +7,7 @@ use EntireUserSync\Admin\Settings\Settings;
 trait SyncHelper {
 
 	private ?Settings $settings_instance = null;
-	private ?Logger   $logger_instance   = null;
+	private ?Logger $logger_instance     = null;
 
 	public function set_settings( Settings $settings ): void {
 		$this->settings_instance = $settings;

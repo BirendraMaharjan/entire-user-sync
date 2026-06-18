@@ -2,8 +2,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-$updated = isset( $_GET['settings-updated'] );
-
+$updated = isset( $_GET['settings-updated'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- No form submission.
 ?>
 <div class="entire-admin-wrap">
 
@@ -21,7 +20,8 @@ $updated = isset( $_GET['settings-updated'] );
 				<span class="entire-admin-badge">
 					<?php
 					printf(
-						esc_html__( 'V %s', 'entire-account-manager' ),
+						/* Translators: %s: Plugin version. */
+						esc_html__( 'V %s', 'entire-user-sync' ),
 						esc_html( $plugin->version() )
 					);
 					?>
@@ -33,7 +33,9 @@ $updated = isset( $_GET['settings-updated'] );
 	<!-- Notice -->
 	<?php if ( $updated ) : ?>
 		<div class="entire-admin-notice entire-admin-notice--success">
-			<strong><?php esc_html_e( 'Settings saved successfully.', 'entire-account-manager' ); ?></strong>
+			<strong>
+				<?php esc_html_e( 'Settings saved successfully.', 'entire-user-sync' ); ?>
+			</strong>
 		</div>
 	<?php endif; ?>
 
@@ -44,7 +46,7 @@ $updated = isset( $_GET['settings-updated'] );
 		if ( is_readable( $file ) ) {
 			require $file;
 		} else {
-			echo '<div class="notice notice-error">Page not found</div>';
+			echo '<div class="notice notice-error">'.esc_html__('Page not found.' , 'entire-user-sync').'</div>';
 		}
 		?>
 	</div><!-- .entire-admin-body -->

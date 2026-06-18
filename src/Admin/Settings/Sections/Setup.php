@@ -15,7 +15,7 @@ class Setup {
 						'type'    => 'checkbox',
 						'default' => '1',
 					),
-					'sites' => array(
+					'sites'       => array(
 						'label'      => __( 'Target Sites', 'entire-user-sync' ),
 						'type'       => 'repeater',
 						'default'    => array(),

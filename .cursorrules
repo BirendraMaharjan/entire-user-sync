@@ -69,7 +69,7 @@ WordPress and WooCommerce Best Practices
 - Use WooCommerce's translation functions for text strings.
 - Support RTL languages in your plugin's CSS.
 - Utilize WooCommerce's logging system for debugging.
-- Example: `wc_get_logger()->debug('Your debug message', array('source' => 'your-plugin'));`
+- Example: `wc_get_logger()->debug('Your debug message', array('source' => 'entire-user-sync'));`
 
 Key Conventions
 1. Follow WordPress's plugin API for extending functionality.

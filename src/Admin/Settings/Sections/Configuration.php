@@ -10,7 +10,7 @@ class Configuration {
 				'title'  => __( 'Configuration', 'entire-user-sync' ),
 				'icon'   => 'dashicons-admin-generic',
 				'fields' => array(
-					'roles' => array(
+					'roles'             => array(
 						'label'       => __( 'Sync Roles', 'entire-user-sync' ),
 						'type'        => 'multiselect',
 						'default'     => array(),
@@ -18,7 +18,7 @@ class Configuration {
 						'desc'        => __( 'Only users with these roles will be synchronised. Leave empty to sync all roles.', 'entire-user-sync' ),
 						'options'     => self::get_role_options(),
 					),
-					'option_meta' => array(
+					'option_meta'       => array(
 						'label'       => __( 'Sync Meta Keys', 'entire-user-sync' ),
 						'type'        => 'multiselect_grouped',
 						'default'     => array(),
@@ -26,7 +26,7 @@ class Configuration {
 						'desc'        => __( 'Choose which user meta fields to include in the sync payload.', 'entire-user-sync' ),
 						'options'     => self::get_meta_key_options(),
 					),
-					'sync_direction' => array(
+					'sync_direction'    => array(
 						'label'   => __( 'Sync Direction', 'entire-user-sync' ),
 						'type'    => 'radio',
 						'default' => 'push',
@@ -37,13 +37,13 @@ class Configuration {
 							'both' => __( 'Both', 'entire-user-sync' ),
 						),
 					),
-					'sync_trigger' => array(
-						'label'   => __( 'Sync Trigger', 'entire-user-sync' ),
-						'type'    => 'multiselect',
-						'default' => array( 'profile_update' ),
+					'sync_trigger'      => array(
+						'label'       => __( 'Sync Trigger', 'entire-user-sync' ),
+						'type'        => 'multiselect',
+						'default'     => array( 'profile_update' ),
 						'placeholder' => __( 'Select triggers…', 'entire-user-sync' ),
-						'desc'    => __( 'Events that trigger an automatic sync.', 'entire-user-sync' ),
-						'options' => array(
+						'desc'        => __( 'Events that trigger an automatic sync.', 'entire-user-sync' ),
+						'options'     => array(
 							'user_register'  => __( 'User Registered', 'entire-user-sync' ),
 							'profile_update' => __( 'Profile Updated', 'entire-user-sync' ),
 							'delete_user'    => __( 'User Deleted', 'entire-user-sync' ),
@@ -65,22 +65,22 @@ class Configuration {
 					),
 					// In Setup::get() fields array — add after 'roles' field
 
-					'role_fallback' => array(
+					'role_fallback'     => array(
 						'label'   => __( 'Role Fallback', 'entire-user-sync' ),
 						'type'    => 'select',
 						'default' => 'subscriber',
 						'desc'    => __( 'Assign this role when the user\'s original role does not exist on the target site.', 'entire-user-sync' ),
 						'options' => array(
-							'subscriber'    => __( 'Subscriber (recommended)', 'entire-user-sync' ),
-							'contributor'   => __( 'Contributor', 'entire-user-sync' ),
-							'author'        => __( 'Author', 'entire-user-sync' ),
-							'editor'        => __( 'Editor', 'entire-user-sync' ),
-							'skip'          => __( 'Skip — do not sync this user', 'entire-user-sync' ),
-							'strip'         => __( 'Sync without a role', 'entire-user-sync' ),
+							'subscriber'  => __( 'Subscriber (recommended)', 'entire-user-sync' ),
+							'contributor' => __( 'Contributor', 'entire-user-sync' ),
+							'author'      => __( 'Author', 'entire-user-sync' ),
+							'editor'      => __( 'Editor', 'entire-user-sync' ),
+							'skip'        => __( 'Skip — do not sync this user', 'entire-user-sync' ),
+							'strip'       => __( 'Sync without a role', 'entire-user-sync' ),
 						),
 					),
 
-					'role_map' => array(
+					'role_map'          => array(
 						'label'      => __( 'Role Map', 'entire-user-sync' ),
 						'type'       => 'repeater',
 						'default'    => array(),
@@ -99,7 +99,7 @@ class Configuration {
 							),
 						),
 					),
-					'batch_size' => array(
+					'batch_size'        => array(
 						'label'   => __( 'Batch Size', 'entire-user-sync' ),
 						'type'    => 'number',
 						'default' => 50,
@@ -108,7 +108,7 @@ class Configuration {
 						'step'    => 1,
 						'desc'    => __( 'Number of users processed per sync request.', 'entire-user-sync' ),
 					),
-					'enable_log' => array(
+					'enable_log'        => array(
 						'label'          => __( 'Enable Logging', 'entire-user-sync' ),
 						'type'           => 'checkbox',
 						'default'        => '1',
@@ -186,8 +186,8 @@ class Configuration {
 		// -------------------------------------------------------------------------
 		$categories = array(
 
-			'Core WordPress' => array(
-				'exact' => array(
+			'Core WordPress'         => array(
+				'exact'  => array(
 					'first_name',
 					'last_name',
 					'nickname',
@@ -205,7 +205,7 @@ class Configuration {
 				'prefix' => array(),
 			),
 
-			'WooCommerce — Billing' => array(
+			'WooCommerce — Billing'  => array(
 				'exact'  => array(),
 				'prefix' => array( 'billing_' ),
 			),
@@ -215,8 +215,8 @@ class Configuration {
 				'prefix' => array( 'shipping_' ),
 			),
 
-			'WooCommerce — Account' => array(
-				'exact' => array(
+			'WooCommerce — Account'  => array(
+				'exact'  => array(
 					'paying_customer',
 					'woocommerce_cart_hash',
 					'wc_last_active',
@@ -228,7 +228,7 @@ class Configuration {
 				),
 			),
 
-			'ACF / Custom Fields' => array(
+			'ACF / Custom Fields'    => array(
 				'exact'  => array(),
 				'prefix' => array( 'acf_', 'field_' ),
 			),
@@ -238,17 +238,17 @@ class Configuration {
 				'prefix' => array( 'bp_', 'buddypress_' ),
 			),
 
-			'Ultimate Member' => array(
+			'Ultimate Member'        => array(
 				'exact'  => array(),
 				'prefix' => array( 'um_', '_um_' ),
 			),
 
-			'Profile Builder' => array(
+			'Profile Builder'        => array(
 				'exact'  => array(),
 				'prefix' => array( 'pb_', 'profile_builder_' ),
 			),
 
-			'Social / OAuth' => array(
+			'Social / OAuth'         => array(
 				'exact'  => array(),
 				'prefix' => array(
 					'facebook_',
@@ -264,7 +264,7 @@ class Configuration {
 		// -------------------------------------------------------------------------
 		// Bucket each key into its category
 		// -------------------------------------------------------------------------
-		$grouped   = array_fill_keys( array_keys( $categories ), array() );
+		$grouped          = array_fill_keys( array_keys( $categories ), array() );
 		$grouped['Other'] = array();
 
 		foreach ( $keys as $key ) {
@@ -275,7 +275,7 @@ class Configuration {
 				// Exact match
 				if ( in_array( $key, $rules['exact'], true ) ) {
 					$grouped[ $cat_label ][ $key ] = $key;
-					$matched = true;
+					$matched                       = true;
 					break;
 				}
 
@@ -283,7 +283,7 @@ class Configuration {
 				foreach ( $rules['prefix'] as $prefix ) {
 					if ( str_starts_with( $key, $prefix ) ) {
 						$grouped[ $cat_label ][ $key ] = $key;
-						$matched = true;
+						$matched                       = true;
 						break 2;
 					}
 				}

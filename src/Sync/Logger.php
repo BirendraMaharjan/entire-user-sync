@@ -36,6 +36,7 @@ class Logger {
 		global $wpdb;
 
 		$table    = $wpdb->prefix . self::TABLE;
+
 		$per_page = max( 1, (int) ( $args['per_page'] ?? 50 ) );
 		$page     = max( 1, (int) ( $args['paged'] ?? 1 ) );
 		$offset   = ( $page - 1 ) * $per_page;
@@ -89,9 +90,13 @@ class Logger {
 		? $wpdb->get_var( $wpdb->prepare( $count_sql, $values ) )
 		: $wpdb->get_var( $count_sql ) );
 
-		$rows_sql   = "SELECT * FROM `{$table}` {$where_sql} ORDER BY `{$orderby}` {$order} LIMIT %d OFFSET %d";
-		$all_values = array_merge( $values, array( $per_page, $offset ) );
-		$rows       = $wpdb->get_results( $wpdb->prepare( $rows_sql, $all_values ), ARRAY_A );
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} {$where_sql} ORDER BY {$orderby} {$order} LIMIT %d OFFSET %d",
+				array_merge( $values, array( $per_page, $offset ) )
+			),
+			ARRAY_A
+		);
 
 		return array(
 			'rows'  => $rows ?: array(),
@@ -102,9 +107,13 @@ class Logger {
 
 	public static function prune( int $days = 90 ): int {
 		global $wpdb;
+
+		$table_name = $wpdb->prefix . self::TABLE;
+
 		return (int) $wpdb->query(
 			$wpdb->prepare(
-				"DELETE FROM `{$wpdb->prefix}" . self::TABLE . '` WHERE created_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL %d DAY)',
+				'DELETE FROM %i WHERE created_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL %d DAY)',
+				$table_name,
 				$days
 			)
 		);
@@ -140,7 +149,15 @@ class Logger {
 
 	public static function drop_table(): void {
 		global $wpdb;
-		$wpdb->query( "DROP TABLE IF EXISTS `{$wpdb->prefix}" . self::TABLE . '`' );
+
+		$table_name = $wpdb->prefix . self::TABLE;
+
+		$wpdb->query(
+			$wpdb->prepare(
+				'DROP TABLE IF EXISTS %i',
+				$table_name
+			)
+		);
 	}
 
 	private static function strip_sensitive( array &$data ): void {

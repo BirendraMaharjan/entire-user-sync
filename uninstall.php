@@ -18,7 +18,8 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 // Delete every option registered by the plugin.
 
 $options = array(
-	/*'entireus_setup',
+	/*
+	'entireus_setup',
 	'entireus_configuration',
 	'entireus_integrations',*/
 );
@@ -77,7 +78,8 @@ use EntireUserSync\Sync\Logger;
 // Autoloader must be loaded before this.
 require_once plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
 
-/*Logger::drop_table();
+/*
+Logger::drop_table();
 
 // Multisite: drop on every sub-site.
 if ( is_multisite() ) {

@@ -12,9 +12,16 @@ class Menus extends Base {
 	public function init(): void {
 		$this->log_page = new LogPage();
 
+		add_filter( 'allowed_redirect_hosts', array( $this, 'allowed_redirect_hosts' ) );
+
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
 		add_action( 'current_screen', array( $this, 'suppress_admin_notices' ) );
 		add_filter( 'plugin_action_links_' . $this->plugin->plugin_basename(), array( $this, 'settings_link' ) );
+	}
+
+	public function allowed_redirect_hosts( $hosts ) {
+		$hosts[] = 'wordpress.org';
+		return $hosts;
 	}
 
 	public function suppress_admin_notices(): void {
@@ -90,7 +97,7 @@ class Menus extends Base {
 			'manage_options',
 			$this->plugin->slug() . '-help',
 			function () {
-				wp_redirect( 'https://wordpress.org/plugins/' );
+				wp_safe_redirect( 'https://wordpress.org/plugins/' );
 				exit;
 			}
 		);
@@ -133,13 +140,13 @@ class Menus extends Base {
 		$setting  = new Settings();
 		$sections = $setting->get_sections();
 
-		$data = [
+		$data = array(
 			'plugin'     => $this->plugin,
 			'page'       => $page,
 			'sections'   => $sections,
 			'setting'    => $setting,
 			'active_tab' => sanitize_key( $_GET['tab'] ?? array_key_first( $sections ) ),
-		];
+		);
 
 		$this->render_template( 'admin/page.php', $data );
 	}
