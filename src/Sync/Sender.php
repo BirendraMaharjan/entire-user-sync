@@ -23,20 +23,6 @@ class Sender {
 	use SyncHelper;
 
 	/**
-	 * Key for signing requests, shared with remote sites.
-	 *
-	 * @var string Secret.
-	 */
-	private string $secret;
-
-	/**
-	 * Constructor.
-	 */
-	public function __construct() {
-		$this->secret = $this->get_secret();
-	}
-
-	/**
 	 * Sync a single user to configured remote sites.
 	 *
 	 * @param int $user_id User ID.
@@ -236,7 +222,7 @@ class Sender {
 	 */
 	public function send_request( string $endpoint, array $data, string $method = 'POST' ): array {
 		$body      = wp_json_encode( $data );
-		$signature = hash_hmac( 'sha256', $body, $this->secret );
+		$signature = hash_hmac( 'sha256', $body, $this->get_secret() );
 
 		$response = wp_remote_request(
 			$endpoint,

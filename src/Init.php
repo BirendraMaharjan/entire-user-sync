@@ -77,5 +77,7 @@ final class Init extends Base {
 			$frontend = new Frontend();
 			$frontend->init();
 		}
+
+		new Sync();
 	}
 }

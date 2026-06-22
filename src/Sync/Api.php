@@ -17,18 +17,9 @@ class Api {
 	use SyncHelper;
 
 	/**
-	 * The secret used to verify incoming signatures.
-	 *
-	 * @var string $secret
-	 */
-	private string $secret;
-
-	/**
 	 * Api constructor.
 	 */
 	public function __construct() {
-		$this->secret = $this->get_secret();
-
 		$this->init();
 	}
 
@@ -109,7 +100,7 @@ class Api {
 			define( 'ENTIREUS_INCOMING_SYNC', true );
 		}
 
-		$secret    = $this->secret;
+		$secret    = $this->get_secret();
 		$signature = $request->get_header( 'X-EntireUS-Signature' );
 		$body      = $request->get_body();
 
