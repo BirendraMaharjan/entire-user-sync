@@ -218,7 +218,8 @@ class Api {
 				'event'       => $event,
 				'direction'   => 'incoming',
 				'user_email'  => $email,
-				'source_site' => $data['site_url'] ?? '',
+				'source_site' => $data['source_site'] ?? '',
+				'target_site' => $data['target_site'] ?? '',
 				'status'      => 'success',
 				'message'     => $existing ? 'User updated from remote.' : 'User created from remote.',
 				'payload'     => $data,
@@ -228,8 +229,7 @@ class Api {
 		return new \WP_REST_Response(
 			array(
 				'message' => $existing ?
-					__('User updated.', 'entire_user_sync') :
-					__( 'User created.', 'entire_user_sync' ),
+					__('User updated.', 'entire_user_sync') : __( 'User created.', 'entire_user_sync' ),
 				'user_id' => $user_id,
 			),
 			200
@@ -381,6 +381,8 @@ class Api {
 				'event'      => 'delete',
 				'direction'  => 'incoming',
 				'user_email' => $email,
+				'source_site' => $data['source_site'] ?? '',
+				'target_site' => $data['target_site'] ?? '',
 				'status'     => $deleted ? 'success' : 'error',
 				'message'    => $deleted ? 'User deleted from remote request.' : 'Delete failed.',
 				'payload'    => array( 'email' => $email ),

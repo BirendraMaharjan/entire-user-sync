@@ -37,7 +37,7 @@ class Logger {
 				'event'       => sanitize_key( $args['event'] ?? 'unknown' ),
 				'direction'   => sanitize_key( $args['direction'] ?? 'outgoing' ),
 				'user_email'  => sanitize_email( $args['user_email'] ?? '' ),
-				'source_site' => esc_url_raw( $args['source_site'] ?? get_site_url() ),
+				'source_site' => esc_url_raw( $args['source_site'] ?? '' ),
 				'target_site' => esc_url_raw( $args['target_site'] ?? '' ),
 				'status'      => sanitize_key( $args['status'] ?? 'success' ),
 				'message'     => sanitize_text_field( $args['message'] ?? '' ),
