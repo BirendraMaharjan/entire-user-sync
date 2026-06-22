@@ -219,6 +219,7 @@ class Api {
 				'direction'   => 'incoming',
 				'user_email'  => $email,
 				'source_site' => $data['site_url'] ?? '',
+				'site_url' => site_url(),
 				'status'      => 'success',
 				'message'     => $existing ? 'User updated from remote.' : 'User created from remote.',
 				'payload'     => $data,
