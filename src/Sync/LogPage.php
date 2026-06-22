@@ -1,9 +1,21 @@
 <?php
+/**
+ * Admin page for viewing and managing sync logs.
+ *
+ * Provides a UI to browse, filter and prune sync event logs.
+ *
+ * @package EntireUserSync
+ */
 
 namespace EntireUserSync\Sync;
 
 use EntireUserSync\Common\Abstracts\Base;
 
+/**
+ * Class LogPage
+ *
+ * @package EntireUserSync\Sync
+ */
 class LogPage extends Base {
 
 	private const MENU_SLUG_SUFFIX = '-logs';
@@ -18,12 +30,20 @@ class LogPage extends Base {
 		'login'    => '#f0a30a',
 	);
 
+	/**
+	 * Constructor.
+	 */
 	public function __construct() {
 		parent::__construct();
 
 		add_action( 'admin_post_' . self::PRUNE_ACTION, array( $this, 'handle_prune' ) );
 	}
 
+	/**
+	 * Handle prune form submission from the admin page.
+	 *
+	 * Validates capabilities and nonce then prunes old log entries.
+	 */
 	public function handle_prune(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( 'You do not have permission to prune sync logs.', 'entire-user-sync' ) );
@@ -53,14 +73,16 @@ class LogPage extends Base {
 		exit;
 	}
 
+	/**
+	 * Render the logs admin page HTML.
+	 */
 	public function render(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
 
-		$view = $this->prepare_view();
-
-		extract( $view, EXTR_SKIP );
+		$entireus_log_page = $this;
+		$entireus_view     = $this->prepare_view();
 
 		$template = $this->plugin->template_path() . '/admin/pages/logs.php';
 
@@ -75,7 +97,13 @@ class LogPage extends Base {
 		require $template;
 	}
 
+	/**
+	 * Prepare view data for the logs admin page.
+	 *
+	 * @return array View context including rows, filters and pagination.
+	 */
 	public function prepare_view(): array {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- This is read-only admin filter state.
 		$filters = $this->get_filters();
 		$result  = Logger::query( $filters );
 
@@ -93,9 +121,16 @@ class LogPage extends Base {
 			'rows'         => $result['rows'],
 			'total'        => $result['total'],
 		);
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 	}
 
+	/**
+	 * Parse and return filters from the request query parameters.
+	 *
+	 * @return array Filters array with sanitized values.
+	 */
 	public function get_filters(): array {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- This is read-only admin filter state.
 		return array(
 			'event'      => sanitize_key( wp_unslash( $_GET['event'] ?? '' ) ),
 			'direction'  => sanitize_key( wp_unslash( $_GET['direction'] ?? '' ) ),
@@ -107,8 +142,17 @@ class LogPage extends Base {
 			'per_page'   => self::DEFAULT_PER_PAGE,
 			'paged'      => max( 1, absint( wp_unslash( $_GET['paged'] ?? 1 ) ) ),
 		);
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 	}
 
+	/**
+	 * Output simple pagination links for the admin view.
+	 *
+	 * @param int    $page     Current page number.
+	 * @param int    $pages    Total pages.
+	 * @param array  $filters  Active filters.
+	 * @param string $base_url Base URL for links.
+	 */
 	public function render_pagination( int $page, int $pages, array $filters, string $base_url ): void {
 		if ( $pages <= 1 ) {
 			return;
@@ -130,18 +174,33 @@ class LogPage extends Base {
 		echo '</div></div>';
 	}
 
+	/**
+	 * Shorten a URL for display (remove protocol and trailing slash).
+	 *
+	 * @param string $url URL to shorten.
+	 * @return string Shortened URL or em-dash when empty.
+	 */
 	public function short_url( string $url ): string {
 		return $url ? preg_replace( '#^https?://#', '', untrailingslashit( $url ) ) : '—';
 	}
 
+	/**
+	 * Return this page's menu slug.
+	 */
 	public function menu_slug(): string {
 		return $this->plugin->slug() . self::MENU_SLUG_SUFFIX;
 	}
 
+	/**
+	 * Return the admin page URL for the logs page.
+	 */
 	public function page_url(): string {
 		return admin_url( 'admin.php?page=' . $this->menu_slug() );
 	}
 
+	/**
+	 * Output inline CSS/JS required by the logs page.
+	 */
 	public function render_assets(): void {
 		?>
 		<style>

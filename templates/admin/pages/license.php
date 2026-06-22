@@ -1,4 +1,9 @@
 <?php
+/**
+ * Admin license page template.
+ *
+ * @package EntireUserSync
+ */
 
 defined( 'ABSPATH' ) || exit;
 ?>

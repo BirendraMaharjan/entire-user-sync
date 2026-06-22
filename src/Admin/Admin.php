@@ -18,10 +18,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * Class Admin
- *
- * Boots all wp-admin submodules.
- *
- * @since 1.0.0
  */
 class Admin extends Base {
 
@@ -32,8 +28,11 @@ class Admin extends Base {
 	 * @since 1.0.0
 	 */
 	public function init(): void {
-		( new Menus() )->init();
-		( new Assets() )->init();
+		$menu = new Menus();
+		$menu->init();
+
+		$assets = new Assets();
+		$assets->init();
 
 		new Settings();
 	}

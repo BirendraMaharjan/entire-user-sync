@@ -1,4 +1,11 @@
 <?php
+/**
+ * Admin menu registration and page routing.
+ *
+ * Creates the top-level plugin menu and subpages and delegates rendering.
+ *
+ * @package EntireUserSync\Admin
+ */
 
 namespace EntireUserSync\Admin;
 
@@ -6,9 +13,20 @@ use EntireUserSync\Admin\Settings\Settings;
 use EntireUserSync\Common\Abstracts\Base;
 use EntireUserSync\Sync\LogPage;
 
+/**
+ * Registers admin menus and dispatches page rendering.
+ */
 class Menus extends Base {
 
+	/**
+	 * Admin log page helper.
+	 *
+	 * @var LogPage
+	 */
 	private LogPage $log_page;
+	/**
+	 * Initialise menu registration and hooks.
+	 */
 	public function init(): void {
 		$this->log_page = new LogPage();
 
@@ -22,16 +40,24 @@ class Menus extends Base {
 		);
 	}
 
+	/**
+	 * Add allowed redirect host entries.
+	 *
+	 * @param array $hosts Current hosts.
+	 * @return array Modified hosts.
+	 */
 	public function allowed_redirect_hosts( $hosts ) {
 		$hosts[] = 'wordpress.org';
 		return $hosts;
 	}
 
+	/**
+	 * Suppress admin notices when viewing the plugin pages to keep UI clean.
+	 */
 	public function suppress_admin_notices(): void {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if (
-			! isset( $_GET['page'] ) ||
-			! str_starts_with( sanitize_key( $_GET['page'] ), $this->plugin->slug() )
+			! isset( $_GET['page'] ) || // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			! str_starts_with( sanitize_key( $_GET['page'] ), $this->plugin->slug() ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		) {
 			return;
 		}
@@ -46,6 +72,9 @@ class Menus extends Base {
 		);
 	}
 
+	/**
+	 * Register top-level and submenu pages for the plugin.
+	 */
 	public function register_menu(): void {
 		add_menu_page(
 			$this->plugin->title(),
@@ -106,6 +135,12 @@ class Menus extends Base {
 		);
 	}
 
+	/**
+	 * Add a settings link to the plugin list row.
+	 *
+	 * @param array $links Existing links.
+	 * @return array Modified links.
+	 */
 	public function settings_link( $links ) {
 		$url = add_query_arg(
 			array(
@@ -123,11 +158,15 @@ class Menus extends Base {
 		return $links;
 	}
 
+	/**
+	 * Render the plugin admin page based on requested subpage.
+	 */
 	public function render_page(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( __( 'No permission', 'entire-user-sync' ) );
+			wp_die( esc_html__( 'No permission', 'entire-user-sync' ) );
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$raw_page = sanitize_key( $_GET['page'] ?? $this->plugin->slug() );
 		$prefix   = $this->plugin->slug() . '-';
 
@@ -139,19 +178,30 @@ class Menus extends Base {
 			$page = substr( $raw_page, strlen( $prefix ) );
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$data = array(
 			'plugin'     => $this->plugin,
 			'page'       => $page,
 			'sections'   => $sections,
 			'setting'    => $setting,
-			'active_tab' => sanitize_key( $_GET['tab'] ?? array_key_first( $sections ) ),
+			'active_tab' => sanitize_key( $_GET['tab'] ?? array_key_first( $sections ) ), // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		);
 
 		$this->render_template( $data );
 	}
 
+	/**
+	 * Render admin template with the provided data.
+	 *
+	 * @param array $data Template data.
+	 */
 	private function render_template( array $data ): void {
-		extract( $data, EXTR_SKIP );
-		require $this->plugin->template_path() . '/' . 'admin/page.php';
+		$plugin     = $data['plugin'];
+		$page       = $data['page'];
+		$sections   = $data['sections'];
+		$setting    = $data['setting'];
+		$active_tab = $data['active_tab'];
+
+		require $this->plugin->template_path() . '/admin/page.php';
 	}
 }

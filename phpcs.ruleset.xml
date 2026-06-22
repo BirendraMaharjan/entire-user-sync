@@ -1,12 +1,13 @@
 <?xml version="1.0"?>
 <ruleset name="WordPress Coding Standards">
-    <description>Apply WordPress Coding Standards to all Core files</description>
+    <!-- For more information: https://make.wordpress.org/plugins/handbook/review/ -->
+    <description>Standards any plugin to be published on wordpress.org should comply with.</description>
 
     <!-- ======================= -->
     <!--     Execution Config     -->
     <!-- ======================= -->
     <arg name="colors"/>
-     <arg name="report" value="full"/>
+    <arg name="report" value="full"/>
     <arg value="ps"/>
     <arg name="basepath" value="./"/>
     <arg name="parallel" value="20"/>
@@ -20,7 +21,7 @@
 
     <!-- Exclude directories and file types -->
     <exclude-pattern>^build/*</exclude-pattern>
-    <exclude-pattern>^assets/*</exclude-pattern>
+    <exclude-pattern>assets/*</exclude-pattern>
     <exclude-pattern>vendor/*</exclude-pattern>
     <exclude-pattern>node_modules/*</exclude-pattern>
     <exclude-pattern>tests/*</exclude-pattern>
@@ -31,7 +32,7 @@
     <!-- ======================= -->
     <!--  WordPress Core Config  -->
     <!-- ======================= -->
-    <config name="minimum_supported_wp_version" value="5.5"/>
+    <config name="minimum_supported_wp_version" value="6.0"/>
     <config name="testVersion" value="7.4-"/>
 
     <!-- ======================= -->
@@ -112,11 +113,9 @@
     <rule ref="WordPress.NamingConventions.PrefixAllGlobals">
         <properties>
                 <property name="prefixes" type="array">
-                    <element value="entire" />
-                    <element value="ENTIRE_" />
-                    <element value="eam_" />
-                    <element value="eus_" />
-                    <element value="EUS_" />
+                    <element value="EntireUserSync" />
+                    <element value="entireus_" />
+                    <element value="ENTIREUS_" />
                 </property>
         </properties>
     </rule>
@@ -154,7 +153,7 @@
     <!-- ======================= -->
     <rule ref="Generic.Metrics.CyclomaticComplexity">
         <properties>
-            <property name="complexity" value="10"/>
+            <property name="complexity" value="20"/>
             <property name="absoluteComplexity" value="20"/>
         </properties>
     </rule>

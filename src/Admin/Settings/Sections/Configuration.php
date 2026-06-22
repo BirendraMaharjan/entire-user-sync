@@ -1,9 +1,22 @@
 <?php
+/**
+ * Configuration section definitions.
+ *
+ * @package EntireUserSync\Admin\Settings
+ */
 
 namespace EntireUserSync\Admin\Settings\Sections;
 
+/**
+ * Class Configuration
+ */
 class Configuration {
 
+	/**
+	 * Return the configuration section definition.
+	 *
+	 * @return array Section array.
+	 */
 	public function get_section(): array {
 		return array(
 			'configuration' => array(
@@ -14,6 +27,11 @@ class Configuration {
 		);
 	}
 
+	/**
+	 * Define configuration fields.
+	 *
+	 * @return array Field definitions.
+	 */
 	private function fields(): array {
 		return array(
 			'roles'             => array(
@@ -126,7 +144,7 @@ class Configuration {
 	 * Returns: [ 'administrator' => 'Administrator', 'editor' => 'Editor', … ]
 	 */
 	private function get_role_options(): array {
-		$roles   = wp_roles()->roles; // raw array, always available after WP loads
+		$roles   = wp_roles()->roles;
 		$options = array();
 
 		foreach ( $roles as $slug => $role ) {
@@ -168,12 +186,12 @@ class Configuration {
 		);
 
 		$where = implode( ' AND ', $where_fragments );
-		$where = '' !== $where ? "WHERE {$where}" : '';
+		$where = '' !== $where ? 'WHERE ' . $where : '';
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- each fragment above is individually prepared.
-		$keys = $wpdb->get_col(
-			"SELECT DISTINCT meta_key FROM {$wpdb->usermeta} {$where} ORDER BY meta_key ASC"
-		);
+		$sql = 'SELECT DISTINCT meta_key FROM ' . $wpdb->usermeta . ' ' . $where . ' ORDER BY meta_key ASC';
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $where_fragments are prepared before use.
+		$keys = $wpdb->get_col( $sql );
 
 		if ( empty( $keys ) ) {
 			return array();

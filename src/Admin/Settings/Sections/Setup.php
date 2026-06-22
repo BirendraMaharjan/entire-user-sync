@@ -1,9 +1,24 @@
 <?php
+/**
+ * Setup section definitions.
+ *
+ * @package EntireUserSync\Admin\Settings
+ */
 
 namespace EntireUserSync\Admin\Settings\Sections;
 
+/**
+ * Setup settings section provider.
+ *
+ * @package EntireUserSync\Admin\Settings
+ */
 class Setup {
 
+	/**
+	 * Return setup section.
+	 *
+	 * @return array
+	 */
 	public function get_section(): array {
 		return array(
 			'setup' => array(
@@ -14,6 +29,11 @@ class Setup {
 		);
 	}
 
+	/**
+	 * Field definitions for setup.
+	 *
+	 * @return array
+	 */
 	public function fields(): array {
 		return array(
 			'sync_enable' => array(

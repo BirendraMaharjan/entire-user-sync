@@ -1,12 +1,17 @@
 <?php
-
-namespace EntireUserSync\Sync;
-
 /**
  * Logger for sync events stored in the database.
  *
  * Responsible for writing and querying sync logs. Uses the WPDB interface
  * and takes care to sanitize inputs and redact sensitive payload fields.
+ *
+ * @package EntireUserSync\Sync
+ */
+
+namespace EntireUserSync\Sync;
+
+/**
+ * Class Logger
  */
 class Logger {
 
@@ -62,7 +67,7 @@ class Logger {
 		$allowed_orderby = array( 'id', 'event', 'direction', 'user_email', 'source_site', 'target_site', 'status', 'created_at' );
 
 		$orderby = in_array( $args['orderby'] ?? '', $allowed_orderby, true )
-		? $args['orderby'] : 'created_at';
+		? $args['orderby'] : 'id';
 		$order   = in_array( strtoupper( $args['order'] ?? '' ), $allowed_order, true )
 		? strtoupper( $args['order'] ) : 'DESC';
 
@@ -104,11 +109,15 @@ class Logger {
 
 		if ( $values ) {
 			// Build and prepare count query. Table name is safe (built from $wpdb->prefix).
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table is built from $wpdb->prefix and internal constant.
 			$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `{$table}` {$where_sql}", ...$values ) );
 		} else {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table is built from $wpdb->prefix and internal constant.
 			$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `{$table}` {$where_sql}" );
 		}
 
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+		// $table, $orderby and $order are validated above and safe to interpolate; placeholders in {$where_sql} and the LIMIT/OFFSET are prepared below.
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT * FROM `{$table}` {$where_sql} ORDER BY {$orderby} {$order} LIMIT %d OFFSET %d",
@@ -116,6 +125,7 @@ class Logger {
 			),
 			ARRAY_A
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
 		return array(
 			'rows'  => $rows ? $rows : array(),

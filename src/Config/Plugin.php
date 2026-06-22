@@ -42,8 +42,13 @@ final class Plugin {
 			return $this->cache;
 		}
 
-		$plugin_file = ENTIRE_USER_SYNC_FILE;
+		$plugin_file = ENTIREUS_FILE;
 
+		/**
+		 * Filter runtime plugin metadata and paths.
+		 *
+		 * @since 1.0.0
+		 */
 		$runtime = apply_filters(
 			'entireus_plugin_data',
 			array(
@@ -57,6 +62,11 @@ final class Plugin {
 			)
 		);
 
+		/**
+		 * Filter plugin file header metadata.
+		 *
+		 * @since 1.0.0
+		 */
 		$meta = apply_filters(
 			'entireus_plugin_meta_data',
 			get_file_data(

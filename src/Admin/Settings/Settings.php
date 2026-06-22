@@ -1,4 +1,13 @@
 <?php
+/**
+ * Settings manager.
+ *
+ * Responsible for registering, rendering and sanitizing plugin settings sections
+ * and fields. The structure of sections is provided by classes in
+ * `src/Admin/Settings/Sections`.
+ *
+ * @package EntireUserSync\Admin\Settings
+ */
 
 namespace EntireUserSync\Admin\Settings;
 
@@ -6,12 +15,34 @@ use EntireUserSync\Common\Abstracts\Base;
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Class Settings
+ *
+ * Manages WordPress settings sections, fields, sanitization, and rendering.
+ *
+ * @package EntireUserSync\Admin\Settings
+ */
 class Settings extends Base {
 
+	/**
+	 * Plugin option name prefix for storing section data.
+	 *
+	 * @var string
+	 */
 	public string $setting_option_name;
 
+	/**
+	 * Cached array of section definitions indexed by section key.
+	 *
+	 * @var array
+	 */
 	private array $sections;
 
+	/**
+	 * Settings constructor.
+	 *
+	 * Initializes option names and registers WordPress hooks for settings and AJAX actions.
+	 */
 	public function __construct() {
 		parent::__construct();
 
@@ -20,6 +51,9 @@ class Settings extends Base {
 		$this->init_hooks();
 	}
 
+	/**
+	 * Register admin initialization hooks.
+	 */
 	private function init_hooks(): void {
 
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
@@ -27,6 +61,11 @@ class Settings extends Base {
 		add_action( 'wp_ajax_entire_reset_section', array( $this, 'ajax_reset_section' ) );
 	}
 
+	/**
+	 * Return cached sections definitions.
+	 *
+	 * @return array Sections keyed by section id.
+	 */
 	public function sections(): array {
 		if ( empty( $this->sections ) ) {
 			$this->sections = $this->get_sections();
@@ -35,6 +74,11 @@ class Settings extends Base {
 		return $this->sections;
 	}
 
+	/**
+	 * Build sections array by merging section providers.
+	 *
+	 * @return array Section definitions.
+	 */
 	public function get_sections() {
 		return array_merge(
 			( new Sections\Setup() )->get_section(),
@@ -43,6 +87,13 @@ class Settings extends Base {
 		);
 	}
 
+	/**
+	 * Register WP settings, sections and fields for each defined plugin section.
+	 *
+	 * This method uses `register_setting`, `add_settings_section` and
+	 * `add_settings_field` for each configured field. Sanitization callback
+	 * is configured to `sanitize_section`.
+	 */
 	public function register_settings() {
 		foreach ( $this->sections() as $section_key => $section ) {
 			$option_name = $this->setting_option_name . '_' . $section_key;
@@ -94,10 +145,19 @@ class Settings extends Base {
 		}
 	}
 
+	/**
+	 * Sanitize an entire section option array.
+	 *
+	 * @param mixed $input Raw submitted option value.
+	 * @return array Sanitized option array.
+	 */
 	public function sanitize_section( $input ) {
 		if ( ! is_array( $input ) ) {
 			return array();
 		}
+
+		// WordPress Settings API provides built-in nonce protection via settings_fields().
+		// This callback is invoked after nonce verification by WordPress.
 
 		$section_key = $this->get_current_section();
 
@@ -118,51 +178,28 @@ class Settings extends Base {
 		return $sanitized;
 	}
 
+	/**
+	 * Sanitize an individual field value according to its declared type.
+	 *
+	 * @param mixed  $value Raw value.
+	 * @param string $type Field type.
+	 * @param array  $field Field definition array.
+	 * @return mixed Sanitized value.
+	 */
 	private function sanitize_field( $value, $type, $field ) {
 		switch ( $type ) {
-
 			case 'checkbox':
 				return isset( $value ) && '1' === (string) $value ? '1' : '0';
 
 			case 'radio':
 			case 'select':
-				if ( empty( $field['options'] ) ) {
-					return sanitize_text_field( $value );
-				}
-				$allowed = array_keys( $field['options'] );
+				return $this->sanitize_select( $value, $field );
 
-				return in_array( $value, $allowed, true ) ? $value : $field['default'];
 			case 'multiselect':
-				if ( ! is_array( $value ) || empty( $field['options'] ) ) {
-					return array();
-				}
-				$allowed = array_keys( $field['options'] );
-
-				return array_values(
-					array_filter(
-						$value,
-						function ( $v ) use ( $allowed ) {
-							return in_array( $v, $allowed, true );
-						}
-					)
-				);
+				return $this->sanitize_multiselect( $value, $field );
 
 			case 'multiselect_grouped':
-				if ( ! is_array( $value ) ) {
-					return array();
-				}
-				// Flatten all grouped options into one allowed list
-				$allowed = array();
-				foreach ( $field['options'] as $group_options ) {
-					$allowed = array_merge( $allowed, array_keys( $group_options ) );
-				}
-
-				return array_values(
-					array_filter(
-						$value,
-						fn( $v ) => in_array( $v, $allowed, true )
-					)
-				);
+				return $this->sanitize_multiselect_grouped( $value, $field );
 
 			case 'textarea':
 				return sanitize_textarea_field( $value );
@@ -177,18 +214,7 @@ class Settings extends Base {
 				return sanitize_email( $value );
 
 			case 'number':
-				if ( ! is_numeric( $value ) ) {
-					return isset( $field['default'] ) ? $field['default'] : 0;
-				}
-				$number = $value + 0;
-				if ( isset( $field['min'] ) && $number < $field['min'] ) {
-					$number = $field['min'];
-				}
-				if ( isset( $field['max'] ) && $number > $field['max'] ) {
-					$number = $field['max'];
-				}
-
-				return $number;
+				return $this->sanitize_number( $value, $field );
 
 			case 'color':
 				return sanitize_hex_color( $value );
@@ -198,37 +224,142 @@ class Settings extends Base {
 
 			case 'password':
 				return '' !== trim( (string) $value ) ? sanitize_text_field( $value ) : $value;
+
 			case 'repeater':
-				if ( ! is_array( $value ) ) {
-					return array();
-				}
-
-				$sub_fields = $field['sub_fields'] ?? array();
-				$sanitized  = array();
-
-				foreach ( $value as $row ) {
-					if ( ! is_array( $row ) ) {
-						continue;
-					}
-
-					$clean_row = array();
-					foreach ( $sub_fields as $sub_key => $sub_field ) {
-						$sub_value             = $row[ $sub_key ] ?? '';
-						$clean_row[ $sub_key ] = $this->sanitize_field( $sub_value, $sub_field['type'], $sub_field );
-					}
-
-					if ( array_filter( $clean_row ) ) {
-						$sanitized[] = $clean_row;
-					}
-				}
-
-				return $sanitized;
+				return $this->sanitize_repeater( $value, $field );
 
 			default:
 				return sanitize_text_field( $value );
 		}
 	}
 
+	/**
+	 * Sanitize a select/radio field value.
+	 *
+	 * @param mixed $value Raw value.
+	 * @param array $field Field definition array.
+	 * @return mixed Sanitized value.
+	 */
+	private function sanitize_select( $value, $field ) {
+		if ( empty( $field['options'] ) ) {
+			return sanitize_text_field( $value );
+		}
+		$allowed = array_keys( $field['options'] );
+
+		return in_array( $value, $allowed, true ) ? $value : $field['default'];
+	}
+
+	/**
+	 * Sanitize a multiselect field value.
+	 *
+	 * @param mixed $value Raw value.
+	 * @param array $field Field definition array.
+	 * @return array Sanitized array.
+	 */
+	private function sanitize_multiselect( $value, $field ) {
+		if ( ! is_array( $value ) || empty( $field['options'] ) ) {
+			return array();
+		}
+		$allowed = array_keys( $field['options'] );
+
+		return array_values(
+			array_filter(
+				$value,
+				function ( $v ) use ( $allowed ) {
+					return in_array( $v, $allowed, true );
+				}
+			)
+		);
+	}
+
+	/**
+	 * Sanitize a grouped multiselect field value.
+	 *
+	 * @param mixed $value Raw value.
+	 * @param array $field Field definition array.
+	 * @return array Sanitized array.
+	 */
+	private function sanitize_multiselect_grouped( $value, $field ) {
+		if ( ! is_array( $value ) ) {
+			return array();
+		}
+		// Flatten all grouped options into one allowed list.
+		$allowed = array();
+		foreach ( $field['options'] as $group_options ) {
+			$allowed = array_merge( $allowed, array_keys( $group_options ) );
+		}
+
+		return array_values(
+			array_filter(
+				$value,
+				fn( $v ) => in_array( $v, $allowed, true )
+			)
+		);
+	}
+
+	/**
+	 * Sanitize a number field value.
+	 *
+	 * @param mixed $value Raw value.
+	 * @param array $field Field definition array.
+	 * @return int|float Sanitized number.
+	 */
+	private function sanitize_number( $value, $field ) {
+		if ( ! is_numeric( $value ) ) {
+			return isset( $field['default'] ) ? $field['default'] : 0;
+		}
+		$number = $value + 0;
+		if ( isset( $field['min'] ) && $number < $field['min'] ) {
+			$number = $field['min'];
+		}
+		if ( isset( $field['max'] ) && $number > $field['max'] ) {
+			$number = $field['max'];
+		}
+
+		return $number;
+	}
+
+	/**
+	 * Sanitize a repeater field value.
+	 *
+	 * @param mixed $value Raw value.
+	 * @param array $field Field definition array.
+	 * @return array Sanitized array of rows.
+	 */
+	private function sanitize_repeater( $value, $field ) {
+		if ( ! is_array( $value ) ) {
+			return array();
+		}
+
+		$sub_fields = $field['sub_fields'] ?? array();
+		$sanitized  = array();
+
+		foreach ( $value as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+
+			$clean_row = array();
+			foreach ( $sub_fields as $sub_key => $sub_field ) {
+				$sub_value             = $row[ $sub_key ] ?? '';
+				$clean_row[ $sub_key ] = $this->sanitize_field( $sub_value, $sub_field['type'], $sub_field );
+			}
+
+			if ( array_filter( $clean_row ) ) {
+				$sanitized[] = $clean_row;
+			}
+		}
+
+		return $sanitized;
+	}
+
+	/**
+	 * Generic sanitizer helper that maps a short type to WP sanitization functions.
+	 *
+	 * @param mixed  $input Value to sanitize.
+	 * @param string $type  Type hint for mapping to specific sanitizer.
+	 * @return mixed Sanitized value.
+	 */
 	public function sanitize( $input, $type = 'text' ): mixed {
 		if ( is_array( $input ) || 'array' === $type ) {
 			return array_map( array( $this, 'sanitize' ), (array) $input );
@@ -250,7 +381,13 @@ class Settings extends Base {
 		return $fn( $input );
 	}
 
+	/**
+	 * Determine current settings section based on the posted option_page.
+	 *
+	 * @return string Section key.
+	 */
 	private function get_current_section() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- The Settings API invokes this during sanitization.
 		$group = isset( $_POST['option_page'] ) ? sanitize_key( $_POST['option_page'] ) : '';
 
 		$group = str_replace( $this->setting_option_name . '_', '', $group );
@@ -259,6 +396,12 @@ class Settings extends Base {
 	}
 
 
+	/**
+	 * Render a single settings field based on its type definition.
+	 *
+	 * @param array $args Render arguments (section, field_key, field, option_name).
+	 * @return void
+	 */
 	public function render_field( $args ) {
 		$option_name = $args['option_name'];
 		$field_key   = $args['field_key'];
@@ -270,274 +413,65 @@ class Settings extends Base {
 		$name        = esc_attr( $option_name ) . '[' . esc_attr( $field_key ) . ']';
 		$id          = esc_attr( $field_key );
 
-		switch ( $type ) {
+		$renderers = array(
+			'textarea'            => function () use ( $id, $name, $value, $field ) {
+				$this->render_textarea( $id, $name, $value, $field );
+			},
+			'checkbox'            => function () use ( $id, $name, $value, $field ) {
+				$this->render_checkbox( $id, $name, $value, $field );
+			},
+			'radio'               => function () use ( $name, $value, $field ) {
+				$this->render_radio_field( $name, $value, $field );
+			},
+			'select'              => function () use ( $id, $name, $value, $field ) {
+				$this->render_select( $id, $name, $value, $field );
+			},
+			'multiselectDefault'  => function () use ( $id, $name, $value, $field ) {
+				$this->render_multiselect_default( $id, $name, is_array( $value ) ? $value : array(), $field );
+			},
+			'multiselect'         => function () use ( $id, $name, $value, $field ) {
+				$this->render_multiselect( $id, $name, is_array( $value ) ? $value : array(), $field );
+			},
+			'multiselect_grouped' => function () use ( $id, $name, $value, $field ) {
+				$this->render_multiselect_grouped_field( $id, $name, is_array( $value ) ? $value : array(), $field );
+			},
+			'number'              => function () use ( $id, $name, $value, $field ) {
+				$this->render_number( $id, $name, $value, $field );
+			},
+			'email'               => function () use ( $id, $name, $value ) {
+				$this->render_email( $id, $name, $value );
+			},
+			'url'                 => function () use ( $id, $name, $value ) {
+				$this->render_url_field( $id, $name, $value );
+			},
+			'password'            => function () use ( $id, $name, $value ) {
+				$this->render_password( $id, $name, $value );
+			},
+			'color'               => function () use ( $id, $name, $value ) {
+				$this->render_color( $id, $name, $value );
+			},
+			'wysiwyg'             => function () use ( $id, $name, $value, $field ) {
+				$this->render_wysiwyg( $id, $name, $value, $field );
+			},
+			'image'               => function () use ( $id, $name, $value ) {
+				$this->render_image_field( $id, $name, $value );
+			},
+			'repeater'            => function () use ( $option_name, $field_key, $value, $field ) {
+				$this->render_repeater_field( $option_name, $field_key, $value, $field );
+			},
+		);
 
-			case 'textarea':
-				printf(
-					'<textarea id="%1$s" name="%2$s" rows="%3$d" class="large-text">%4$s</textarea>',
-					esc_attr( $id ),
-					esc_attr( $name ),
-					isset( $field['rows'] ) ? absint( $field['rows'] ) : 5,
-					esc_textarea( $value )
-				);
-				break;
-
-			case 'checkbox':
-				printf(
-					'<label><input type="checkbox" id="%1$s" name="%2$s" value="1" %3$s /> %4$s</label>',
-					esc_attr( $id ),
-					esc_attr( $name ),
-					checked( $value, '1', false ),
-					isset( $field['checkbox_label'] ) ? esc_html( $field['checkbox_label'] ) : esc_html__( 'Enable', 'entire-user-sync' )
-				);
-				break;
-
-			case 'radio':
-				foreach ( $field['options'] as $opt_value => $opt_label ) {
-					printf(
-						'<label style="display:block;margin-bottom:5px;">
-							<input type="radio" name="%1$s" value="%2$s" %3$s /> %4$s
-						</label>',
-						esc_attr( $name ),
-						esc_attr( $opt_value ),
-						checked( $value, $opt_value, false ),
-						esc_html( $opt_label )
-					);
-				}
-				break;
-
-			case 'select':
-				printf(
-					'<select id="%1$s" name="%2$s">',
-					esc_attr( $id ),
-					esc_attr( $name )
-				);
-				foreach ( $field['options'] as $opt_value => $opt_label ) {
-					printf(
-						'<option value="%1$s" %2$s>%3$s</option>',
-						esc_attr( $opt_value ),
-						selected( $value, $opt_value, false ),
-						esc_html( $opt_label )
-					);
-				}
-				echo '</select>';
-				break;
-
-			case 'multiselectDefault':
-				$value = is_array( $value ) ? $value : array();
-				printf(
-					'<select id="%1$s" name="%2$s[]" multiple="multiple" size="%3$d" style="min-width:200px;">',
-					esc_attr( $id ),
-					esc_attr( $name ),
-					isset( $field['size'] ) ? absint( $field['size'] ) : 5
-				);
-				foreach ( $field['options'] as $opt_value => $opt_label ) {
-					printf(
-						'<option value="%1$s" %2$s>%3$s</option>',
-						esc_attr( $opt_value ),
-						in_array( $opt_value, $value, true ) ? 'selected="selected"' : '',
-						esc_html( $opt_label )
-					);
-				}
-				echo '</select>';
-				break;
-			case 'multiselect':
-				$value = is_array( $value ) ? $value : array();
-
-				printf(
-					'<select id="%s" name="%s[]" multiple="multiple" class="entire-select2" style="width:100%%;max-width:25em;" data-placeholder="%s">',
-					esc_attr( $id ),
-					esc_attr( $name ),
-					isset( $field['placeholder'] ) ? esc_attr( $field['placeholder'] ) : esc_attr__( 'Select options...', 'entire-user-sync' )
-				);
-
-				foreach ( $field['options'] as $opt_val => $opt_label ) {
-					printf(
-						'<option value="%s" %s>%s</option>',
-						esc_attr( $opt_val ),
-						in_array( $opt_val, $value, true ) ? 'selected="selected"' : '',
-						esc_html( $opt_label )
-					);
-				}
-
-				echo '</select>';
-				break;
-			case 'multiselect_grouped':
-				$value = is_array( $value ) ? $value : array();
-
-				printf(
-					'<select id="%s" name="%s[]" multiple="multiple" class="entire-select2" style="width:100%%;max-width:25em;" data-placeholder="%s">',
-					esc_attr( $id ),
-					esc_attr( $name ),
-					isset( $field['placeholder'] ) ? esc_attr( $field['placeholder'] ) : esc_attr__( 'Select options...', 'entire-user-sync' )
-				);
-
-				foreach ( $field['options'] as $group_label => $group_options ) {
-					printf( '<optgroup label="%s">', esc_attr( $group_label ) );
-
-					foreach ( $group_options as $opt_val => $opt_label ) {
-						printf(
-							'<option value="%s" %s>%s</option>',
-							esc_attr( $opt_val ),
-							in_array( $opt_val, $value, true ) ? 'selected="selected"' : '',
-							esc_html( $opt_label )
-						);
-					}
-
-					echo '</optgroup>';
-				}
-
-				echo '</select>';
-				break;
-
-			case 'number':
-				printf(
-					'<input type="number" id="%1$s" name="%2$s" value="%3$s" min="%4$s" max="%5$s" step="%6$s" class="small-text" />',
-					esc_attr( $id ),
-					esc_attr( $name ),
-					esc_attr( $value ),
-					isset( $field['min'] ) ? esc_attr( $field['min'] ) : '0',
-					isset( $field['max'] ) ? esc_attr( $field['max'] ) : '',
-					isset( $field['step'] ) ? esc_attr( $field['step'] ) : '1'
-				);
-				break;
-
-			case 'email':
-				printf(
-					'<input type="email" id="%1$s" name="%2$s" value="%3$s" class="regular-text" />',
-					esc_attr( $id ),
-					esc_attr( $name ),
-					esc_attr( $value )
-				);
-				break;
-
-			case 'url':
-				printf(
-					'<input type="url" id="%1$s" name="%2$s" value="%3$s" class="regular-text" />',
-					esc_attr( $id ),
-					esc_attr( $name ),
-					esc_url( $value )
-				);
-				break;
-
-			case 'password':
-				printf(
-					'<input type="password" id="%1$s" name="%2$s" value="%3$s" class="regular-text" autocomplete="new-password" />',
-					esc_attr( $id ),
-					esc_attr( $name ),
-					esc_attr( $value )
-				);
-				break;
-
-			case 'color':
-				printf(
-					'<input type="color" id="%1$s" name="%2$s" value="%3$s" />',
-					esc_attr( $id ),
-					esc_attr( $name ),
-					esc_attr( $value )
-				);
-				break;
-
-			case 'wysiwyg':
-				wp_editor(
-					wp_kses_post( $value ),
-					$id,
-					array(
-						'textarea_name' => $name,
-						'textarea_rows' => isset( $field['rows'] ) ? absint( $field['rows'] ) : 10,
-						'media_buttons' => isset( $field['media_buttons'] ) && (bool) $field['media_buttons'],
-					)
-				);
-				break;
-
-			case 'image':
-				$attachment_id = absint( $value );
-				$img_url       = $attachment_id ? wp_get_attachment_image_url( $attachment_id, 'thumbnail' ) : '';
-				?>
-				<div class="entire-image-field" data-field="<?php echo esc_attr( $id ); ?>">
-					<input
-						type="hidden"
-						id="<?php echo esc_attr( $id ); ?>"
-						name="<?php echo esc_attr( $name ); ?>"
-						value="<?php echo esc_attr( $attachment_id ); ?>"
-					/>
-
-					<div class="entire-image-preview">
-						<?php if ( $img_url ) : ?>
-							<img src="<?php echo esc_url( $img_url ); ?>" alt=""/>
-						<?php endif; ?>
-					</div>
-
-					<button
-						type="button"
-						class="button entire-upload-image"
-						data-field="<?php echo esc_attr( $id ); ?>"
-					>
-						<?php esc_html_e( 'Upload Image', 'entire-user-sync' ); ?>
-					</button>
-
-					<?php if ( $attachment_id ) : ?>
-						<button
-							type="button"
-							class="button entire-remove-image"
-							data-field="<?php echo esc_attr( $id ); ?>"
-						>
-							<?php esc_html_e( 'Remove', 'entire-user-sync' ); ?>
-						</button>
-					<?php endif; ?>
-				</div>
-				<?php
-				break;
-			case 'repeater':
-				$rows       = is_array( $value ) ? $value : array();
-				$sub_fields = $field['sub_fields'] ?? array();
-				$name_base  = $option_name . '[' . $field_key . ']';
-				?>
-
-				<div class="entire-repeater" data-name-base="<?php echo esc_attr( $name_base ); ?>">
-
-					<div class="entire-repeater-rows">
-						<?php foreach ( $rows as $i => $row ) : ?>
-							<div class="entire-repeater-row">
-								<?php foreach ( $sub_fields as $sub_key => $sub_field ) : ?>
-									<div class="entire-repeater-col">
-										<label><?php echo esc_html( $sub_field['label'] ); ?></label>
-										<?php
-										$this->render_repeater_input(
-											$sub_field,
-											$name_base . '[' . $i . '][' . $sub_key . ']',
-											$row[ $sub_key ] ?? ''
-										);
-										?>
-									</div>
-								<?php endforeach; ?>
-								<button type="button" class="button entire-remove-row">&#x2715;</button>
-							</div>
-						<?php endforeach; ?>
-					</div>
-
-					<button
-						type="button"
-						class="button entire-add-row"
-						data-sub-fields="<?php echo esc_attr( wp_json_encode( $sub_fields ) ); ?>"
-					>
-						+ <?php echo esc_html( $field['add_label'] ?? __( 'Add Row', 'entire-user-sync' ) ); ?>
-					</button>
-
-				</div>
-
-				<?php
-				break;
-			default:
-				printf(
-					'<input type="%1$s" id="%2$s" name="%3$s" value="%4$s" class="regular-text" %5$s/>',
-					esc_attr( $type ),
-					esc_attr( $id ),
-					esc_attr( $name ),
-					esc_attr( $value ),
-					esc_attr( $required )
-				);
-				break;
+		if ( isset( $renderers[ $type ] ) ) {
+			$renderers[ $type ]();
+		} else {
+			printf(
+				'<input type="%1$s" id="%2$s" name="%3$s" value="%4$s" class="regular-text" %5$s/>',
+				esc_attr( $type ),
+				esc_attr( $id ),
+				esc_attr( $name ),
+				esc_attr( $value ),
+				esc_attr( $required )
+			);
 		}
 
 		if ( ! empty( $field['desc'] ) ) {
@@ -545,7 +479,382 @@ class Settings extends Base {
 		}
 	}
 
+	/**
+	 * Render textarea field.
+	 *
+	 * @param string $id Field ID.
+	 * @param string $name Field name.
+	 * @param mixed  $value Field value.
+	 * @param array  $field Field definition.
+	 */
+	private function render_textarea( $id, $name, $value, $field ) {
+		printf(
+			'<textarea id="%1$s" name="%2$s" rows="%3$d" class="large-text">%4$s</textarea>',
+			esc_attr( $id ),
+			esc_attr( $name ),
+			isset( $field['rows'] ) ? absint( $field['rows'] ) : 5,
+			esc_textarea( $value )
+		);
+	}
+
+	/**
+	 * Render checkbox field.
+	 *
+	 * @param string $id Field ID.
+	 * @param string $name Field name.
+	 * @param mixed  $value Field value.
+	 * @param array  $field Field definition.
+	 */
+	private function render_checkbox( $id, $name, $value, $field ) {
+		printf(
+			'<label><input type="checkbox" id="%1$s" name="%2$s" value="1" %3$s /> %4$s</label>',
+			esc_attr( $id ),
+			esc_attr( $name ),
+			checked( $value, '1', false ),
+			isset( $field['checkbox_label'] ) ? esc_html( $field['checkbox_label'] ) : esc_html__( 'Enable', 'entire-user-sync' )
+		);
+	}
+
+	/**
+	 * Render radio button field.
+	 *
+	 * @param string $name Field name.
+	 * @param mixed  $value Field value.
+	 * @param array  $field Field definition.
+	 */
+	private function render_radio_field( $name, $value, $field ) {
+		foreach ( $field['options'] as $opt_value => $opt_label ) {
+			printf(
+				'<label style="display:block;margin-bottom:5px;"><input type="radio" name="%1$s" value="%2$s" %3$s /> %4$s</label>',
+				esc_attr( $name ),
+				esc_attr( $opt_value ),
+				checked( $value, $opt_value, false ),
+				esc_html( $opt_label )
+			);
+		}
+	}
+
+	/**
+	 * Render select field.
+	 *
+	 * @param string $id Field ID.
+	 * @param string $name Field name.
+	 * @param mixed  $value Field value.
+	 * @param array  $field Field definition.
+	 */
+	private function render_select( $id, $name, $value, $field ) {
+		printf(
+			'<select id="%1$s" name="%2$s">',
+			esc_attr( $id ),
+			esc_attr( $name )
+		);
+		foreach ( $field['options'] as $opt_value => $opt_label ) {
+			printf(
+				'<option value="%1$s" %2$s>%3$s</option>',
+				esc_attr( $opt_value ),
+				selected( $value, $opt_value, false ),
+				esc_html( $opt_label )
+			);
+		}
+		echo '</select>';
+	}
+
+	/**
+	 * Render multiselect with default size.
+	 *
+	 * @param string $id Field ID.
+	 * @param string $name Field name.
+	 * @param array  $value Field value.
+	 * @param array  $field Field definition.
+	 */
+	private function render_multiselect_default( $id, $name, $value, $field ) {
+		printf(
+			'<select id="%1$s" name="%2$s[]" multiple="multiple" size="%3$d" style="min-width:200px;">',
+			esc_attr( $id ),
+			esc_attr( $name ),
+			isset( $field['size'] ) ? absint( $field['size'] ) : 5
+		);
+		foreach ( $field['options'] as $opt_value => $opt_label ) {
+			printf(
+				'<option value="%1$s" %2$s>%3$s</option>',
+				esc_attr( $opt_value ),
+				in_array( $opt_value, $value, true ) ? 'selected="selected"' : '',
+				esc_html( $opt_label )
+			);
+		}
+		echo '</select>';
+	}
+
+	/**
+	 * Render multiselect field.
+	 *
+	 * @param string $id Field ID.
+	 * @param string $name Field name.
+	 * @param array  $value Field value.
+	 * @param array  $field Field definition.
+	 */
+	private function render_multiselect( $id, $name, $value, $field ) {
+		printf(
+			'<select id="%s" name="%s[]" multiple="multiple" class="entire-select2" style="width:100%%;max-width:25em;" data-placeholder="%s">',
+			esc_attr( $id ),
+			esc_attr( $name ),
+			isset( $field['placeholder'] ) ? esc_attr( $field['placeholder'] ) : esc_attr__( 'Select options...', 'entire-user-sync' )
+		);
+
+		foreach ( $field['options'] as $opt_val => $opt_label ) {
+			printf(
+				'<option value="%s" %s>%s</option>',
+				esc_attr( $opt_val ),
+				in_array( $opt_val, $value, true ) ? 'selected="selected"' : '',
+				esc_html( $opt_label )
+			);
+		}
+
+		echo '</select>';
+	}
+
+	/**
+	 * Render grouped multiselect field.
+	 *
+	 * @param string $id Field ID.
+	 * @param string $name Field name.
+	 * @param array  $value Field value.
+	 * @param array  $field Field definition.
+	 */
+	private function render_multiselect_grouped_field( $id, $name, $value, $field ) {
+		printf(
+			'<select id="%s" name="%s[]" multiple="multiple" class="entire-select2" style="width:100%%;max-width:25em;" data-placeholder="%s">',
+			esc_attr( $id ),
+			esc_attr( $name ),
+			isset( $field['placeholder'] ) ? esc_attr( $field['placeholder'] ) : esc_attr__( 'Select options...', 'entire-user-sync' )
+		);
+
+		foreach ( $field['options'] as $group_label => $group_options ) {
+			printf( '<optgroup label="%s">', esc_attr( $group_label ) );
+
+			foreach ( $group_options as $opt_val => $opt_label ) {
+				printf(
+					'<option value="%s" %s>%s</option>',
+					esc_attr( $opt_val ),
+					in_array( $opt_val, $value, true ) ? 'selected="selected"' : '',
+					esc_html( $opt_label )
+				);
+			}
+
+			echo '</optgroup>';
+		}
+
+		echo '</select>';
+	}
+
+	/**
+	 * Render number field.
+	 *
+	 * @param string $id Field ID.
+	 * @param string $name Field name.
+	 * @param mixed  $value Field value.
+	 * @param array  $field Field definition.
+	 */
+	private function render_number( $id, $name, $value, $field ) {
+		printf(
+			'<input type="number" id="%1$s" name="%2$s" value="%3$s" min="%4$s" max="%5$s" step="%6$s" class="small-text" />',
+			esc_attr( $id ),
+			esc_attr( $name ),
+			esc_attr( $value ),
+			isset( $field['min'] ) ? esc_attr( $field['min'] ) : '0',
+			isset( $field['max'] ) ? esc_attr( $field['max'] ) : '',
+			isset( $field['step'] ) ? esc_attr( $field['step'] ) : '1'
+		);
+	}
+
+	/**
+	 * Render email field.
+	 *
+	 * @param string $id Field ID.
+	 * @param string $name Field name.
+	 * @param mixed  $value Field value.
+	 */
+	private function render_email( $id, $name, $value ) {
+		printf(
+			'<input type="email" id="%1$s" name="%2$s" value="%3$s" class="regular-text" />',
+			esc_attr( $id ),
+			esc_attr( $name ),
+			esc_attr( $value )
+		);
+	}
+
+	/**
+	 * Render URL field.
+	 *
+	 * @param string $id Field ID.
+	 * @param string $name Field name.
+	 * @param mixed  $value Field value.
+	 */
+	private function render_url_field( $id, $name, $value ) {
+		printf(
+			'<input type="url" id="%1$s" name="%2$s" value="%3$s" class="regular-text" />',
+			esc_attr( $id ),
+			esc_attr( $name ),
+			esc_url( $value )
+		);
+	}
+
+	/**
+	 * Render password field.
+	 *
+	 * @param string $id Field ID.
+	 * @param string $name Field name.
+	 * @param mixed  $value Field value.
+	 */
+	private function render_password( $id, $name, $value ) {
+		printf(
+			'<input type="password" id="%1$s" name="%2$s" value="%3$s" class="regular-text" autocomplete="new-password" />',
+			esc_attr( $id ),
+			esc_attr( $name ),
+			esc_attr( $value )
+		);
+	}
+
+	/**
+	 * Render color picker field.
+	 *
+	 * @param string $id Field ID.
+	 * @param string $name Field name.
+	 * @param mixed  $value Field value.
+	 */
+	private function render_color( $id, $name, $value ) {
+		printf(
+			'<input type="color" id="%1$s" name="%2$s" value="%3$s" />',
+			esc_attr( $id ),
+			esc_attr( $name ),
+			esc_attr( $value )
+		);
+	}
+
+	/**
+	 * Render WYSIWYG editor field.
+	 *
+	 * @param string $id Field ID.
+	 * @param string $name Field name.
+	 * @param mixed  $value Field value.
+	 * @param array  $field Field definition.
+	 */
+	private function render_wysiwyg( $id, $name, $value, $field ) {
+		wp_editor(
+			wp_kses_post( $value ),
+			$id,
+			array(
+				'textarea_name' => $name,
+				'textarea_rows' => isset( $field['rows'] ) ? absint( $field['rows'] ) : 10,
+				'media_buttons' => isset( $field['media_buttons'] ) && (bool) $field['media_buttons'],
+			)
+		);
+	}
+
+	/**
+	 * Render image upload field.
+	 *
+	 * @param string $id Field ID.
+	 * @param string $name Field name.
+	 * @param mixed  $value Field value.
+	 */
+	private function render_image_field( $id, $name, $value ) {
+		$attachment_id = absint( $value );
+		$img_url       = $attachment_id ? wp_get_attachment_image_url( $attachment_id, 'thumbnail' ) : '';
+		?>
+		<div class="entire-image-field" data-field="<?php echo esc_attr( $id ); ?>">
+			<input
+				type="hidden"
+				id="<?php echo esc_attr( $id ); ?>"
+				name="<?php echo esc_attr( $name ); ?>"
+				value="<?php echo esc_attr( $attachment_id ); ?>"
+			/>
+
+			<div class="entire-image-preview">
+				<?php if ( $img_url ) : ?>
+					<img src="<?php echo esc_url( $img_url ); ?>" alt=""/>
+				<?php endif; ?>
+			</div>
+
+			<button
+				type="button"
+				class="button entire-upload-image"
+				data-field="<?php echo esc_attr( $id ); ?>"
+			>
+				<?php esc_html_e( 'Upload Image', 'entire-user-sync' ); ?>
+			</button>
+
+			<?php if ( $attachment_id ) : ?>
+				<button
+					type="button"
+					class="button entire-remove-image"
+					data-field="<?php echo esc_attr( $id ); ?>"
+				>
+					<?php esc_html_e( 'Remove', 'entire-user-sync' ); ?>
+				</button>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render repeater field.
+	 *
+	 * @param string $option_name Option name.
+	 * @param string $field_key Field key.
+	 * @param mixed  $value Field value.
+	 * @param array  $field Field definition.
+	 */
+	private function render_repeater_field( $option_name, $field_key, $value, $field ) {
+		$rows       = is_array( $value ) ? $value : array();
+		$sub_fields = $field['sub_fields'] ?? array();
+		$name_base  = $option_name . '[' . $field_key . ']';
+		?>
+
+		<div class="entire-repeater" data-name-base="<?php echo esc_attr( $name_base ); ?>">
+
+			<div class="entire-repeater-rows">
+				<?php foreach ( $rows as $i => $row ) : ?>
+					<div class="entire-repeater-row">
+						<?php foreach ( $sub_fields as $sub_key => $sub_field ) : ?>
+							<div class="entire-repeater-col">
+								<label><?php echo esc_html( $sub_field['label'] ); ?></label>
+								<?php
+								$this->render_repeater_input(
+									$sub_field,
+									$name_base . '[' . $i . '][' . $sub_key . ']',
+									$row[ $sub_key ] ?? ''
+								);
+								?>
+							</div>
+						<?php endforeach; ?>
+						<button type="button" class="button entire-remove-row">&#x2715;</button>
+					</div>
+				<?php endforeach; ?>
+			</div>
+
+			<button
+				type="button"
+				class="button entire-add-row"
+				data-sub-fields="<?php echo esc_attr( wp_json_encode( $sub_fields ) ); ?>"
+			>
+				+ <?php echo esc_html( $field['add_label'] ?? __( 'Add Row', 'entire-user-sync' ) ); ?>
+			</button>
+
+		</div>
+
+		<?php
+	}
+
+	/**
+	 * Helper to render a single input element for a repeater sub-field.
+	 *
+	 * @param array  $sub_field Sub-field definition.
+	 * @param string $name      Form element name.
+	 * @param mixed  $value     Current value.
+	 */
 	private function render_repeater_input( $sub_field, $name, $value ) {
+		// phpcs:disable Generic.Metrics.CyclomaticComplexity.TooHigh -- This helper intentionally handles many field types.
 		$type        = isset( $sub_field['type'] ) ? $sub_field['type'] : 'text';
 		$placeholder = isset( $sub_field['placeholder'] ) ? $sub_field['placeholder'] : '';
 
@@ -610,8 +919,14 @@ class Settings extends Base {
 				);
 				break;
 		}
+		// phpcs:enable Generic.Metrics.CyclomaticComplexity.TooHigh
 	}
 
+	/**
+	 * AJAX handler to reset a section to its default values.
+	 *
+	 * Verifies nonce and capabilities before updating the option.
+	 */
 	public function ajax_reset_section() {
 
 		check_ajax_referer( 'entire_nonce', 'nonce' );
@@ -637,8 +952,14 @@ class Settings extends Base {
 		wp_send_json_success( array( 'defaults' => $defaults ) );
 	}
 
+	/**
+	 * Output navigation tabs for the settings pages.
+	 *
+	 * @return void
+	 */
 	public function navigation() {
-		$active_tab = sanitize_key( $_GET['tab'] ?? array_key_first( $this->sections() ) );
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- This is read-only admin navigation state.
+		$active_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : array_key_first( $this->sections() );
 		?>
 		<nav class="nav-tab-wrapper">
 			<?php foreach ( $this->sections() as $key => $section ) : ?>
@@ -655,10 +976,18 @@ class Settings extends Base {
 			<?php endforeach; ?>
 		</nav>
 		<?php
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 	}
 
+	/**
+	 * Build URL for a specific settings tab.
+	 *
+	 * @param string $tab Tab key.
+	 * @return string URL.
+	 */
 	public function get_tab_url( string $tab ): string {
-		$page = sanitize_key( $_GET['page'] ?? '' );
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- This is read-only URL generation.
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 
 		return add_query_arg(
 			array(
@@ -667,12 +996,13 @@ class Settings extends Base {
 			),
 			admin_url( 'admin.php' )
 		);
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 	}
 
 	/**
 	 * Get a field value with fallback chain:
 	 *   1. DB value  (even if falsy: 0, '', false)
-	 *   2. $default param (if passed)
+	 *   2. $fallback param (if passed)
 	 *   3. Field definition 'default'
 	 *   4. null
 	 *
@@ -680,22 +1010,30 @@ class Settings extends Base {
 	 *   $this->get( 'setup', 'enable' );
 	 *   $this->get( 'setup', 'enable', false );
 	 */
-	public function get( string $section, string $field, mixed $default = '__UNSET__' ): mixed {
+	/**
+	 * Get a field value with fallback to defaults and field definition.
+	 *
+	 * @param string $section Section key.
+	 * @param string $field   Field key.
+	 * @param mixed  $fallback Optional explicit fallback default.
+	 * @return mixed Field value or fallback.
+	 */
+	public function get( string $section, string $field, mixed $fallback = '__UNSET__' ): mixed {
 
 		$option_name = $this->setting_option_name . '_' . $section;
-		$option      = get_option( $option_name );   // false if never saved
+		$option      = get_option( $option_name );   // False if never saved.
 
-		// Something in DB for this section
+		// Something in DB for this section.
 		if ( is_array( $option ) && array_key_exists( $field, $option ) ) {
 			return $option[ $field ];
 		}
 
-		// Explicit fallback passed
-		if ( $default !== '__UNSET__' ) {
-			return $default;
+		// Explicit fallback passed.
+		if ( $fallback !== '__UNSET__' ) {
+			return $fallback;
 		}
 
-		// Fall back to field definition default
+		// Fall back to field definition default.
 		return $this->sections()[ $section ]['fields'][ $field ]['default'] ?? null;
 	}
 
@@ -704,6 +1042,14 @@ class Settings extends Base {
 	 *
 	 * Usage:
 	 *   $this->set( 'setup', 'enable', '1' );
+	 */
+	/**
+	 * Set and persist a single field value within a section option.
+	 *
+	 * @param string $section Section key.
+	 * @param string $field   Field key.
+	 * @param mixed  $value   Value to store.
+	 * @return bool True on success.
 	 */
 	public function set( string $section, string $field, mixed $value ): bool {
 

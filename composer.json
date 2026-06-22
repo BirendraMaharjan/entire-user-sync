@@ -20,8 +20,8 @@
             "@static-analysis",
             "@tests"
         ],
-        "phpcs": "./vendor/bin/phpcs --standard=phpcs.xml.dist",
-        "phpcbf": "./vendor/bin/phpcbf --standard=phpcs.xml.dist",
+        "phpcs": "./vendor/bin/phpcs --standard=phpcs.ruleset.xml",
+        "phpcbf": "./vendor/bin/phpcbf --standard=phpcs.ruleset.xml",
         "phpstan": "./vendor/bin/phpstan analyse",
         "wp-install": "wp core download && wp config create --dbname=testdb --dbuser=root --dbpass=root",
         "wp-activate": "wp plugin activate vi-enroll-course",

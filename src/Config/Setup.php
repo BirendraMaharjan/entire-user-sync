@@ -63,7 +63,7 @@ final class Setup {
 			return;
 		}
 
-		// Logger::drop_table();
+		// Custom table cleanup remains disabled on deactivation.
 
 		wp_clear_scheduled_hook( 'entireus_scheduled_sync' );
 

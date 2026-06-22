@@ -69,13 +69,13 @@ final class Init extends Base {
 	 */
 	public function load_modules(): void {
 		if ( $this->is_request( 'admin' ) ) {
-			( new Admin() )->init();
+			$admin = new Admin();
+			$admin->init();
 		}
 
 		if ( $this->is_request( 'frontend' ) ) {
-			( new Frontend() )->init();
+			$frontend = new Frontend();
+			$frontend->init();
 		}
-
-		// new Sync();
 	}
 }

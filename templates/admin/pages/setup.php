@@ -13,15 +13,15 @@ defined( 'ABSPATH' ) || exit;
 
 <!-- Content -->
 <div class="entire-admin-content">
-	<?php foreach ( $sections as $section_key => $section ) : ?>
+	<?php foreach ( $sections as $entireus_section_key => $entireus_section ) : ?>
 		<div
-			class="entire-setting-section <?php echo $active_tab === $section_key ? 'is-active' : ''; ?>"
-			data-section="<?php echo esc_attr( $section_key ); ?>"
+			class="entire-setting-section <?php echo $active_tab === $entireus_section_key ? 'is-active' : ''; ?>"
+			data-section="<?php echo esc_attr( $entireus_section_key ); ?>"
 		>
 
 			<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>">
-				<?php settings_fields( $setting->setting_option_name . '_' . $section_key . '_group' ); ?>
-				<?php do_settings_sections( $setting->setting_option_name . '_' . $section_key ); ?>
+				<?php settings_fields( $setting->setting_option_name . '_' . $entireus_section_key . '_group' ); ?>
+				<?php do_settings_sections( $setting->setting_option_name . '_' . $entireus_section_key ); ?>
 
 				<div class="entire-section-footer">
 					<?php submit_button( __( 'Save Changes', 'entire-user-sync' ), 'primary', 'submit', false ); ?>
@@ -29,7 +29,7 @@ defined( 'ABSPATH' ) || exit;
 					<button
 						type="button"
 						class="button button-secondary entire-setting-reset"
-						data-section="<?php echo esc_attr( $section_key ); ?>"
+						data-section="<?php echo esc_attr( $entireus_section_key ); ?>"
 					>
 						<span class="dashicons dashicons-image-rotate"></span>
 						<?php esc_html_e( 'Reset Default', 'entire-user-sync' ); ?>

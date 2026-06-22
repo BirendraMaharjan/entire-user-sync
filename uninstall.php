@@ -17,28 +17,27 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 // ── Options ───────────────────────────────────────────────────────────────────
 // Delete every option registered by the plugin.
 
-$options = array(
-	/*
+$entireus_options = array(
 	'entireus_setup',
 	'entireus_configuration',
-	'entireus_integrations',*/
+	'entireus_integrations',
 );
 
-foreach ( $options as $option ) {
-	delete_option( $option );
+foreach ( $entireus_options as $entireus_option ) {
+	delete_option( $entireus_option );
 }
 
 // ── Multisite ─────────────────────────────────────────────────────────────────
 // On a multisite network, clean up every sub-site's options as well.
 
 if ( is_multisite() ) {
-	$sites = get_sites( array( 'fields' => 'ids' ) );
+	$entireus_sites = get_sites( array( 'fields' => 'ids' ) );
 
-	foreach ( $sites as $site_id ) {
-		switch_to_blog( $site_id );
+	foreach ( $entireus_sites as $entireus_site_id ) {
+		switch_to_blog( $entireus_site_id );
 
-		foreach ( $options as $option ) {
-			delete_option( $option );
+		foreach ( $entireus_options as $entireus_option ) {
+			delete_option( $entireus_option );
 		}
 
 		restore_current_blog();
@@ -48,44 +47,34 @@ if ( is_multisite() ) {
 // ── Scheduled events ──────────────────────────────────────────────────────────
 // Clear any cron jobs registered by the plugin.
 
-$cron_hooks = array(
+$entireus_cron_hooks = array(
 	'entireus_scheduled_sync',
 );
 
-foreach ( $cron_hooks as $hook ) {
-	$timestamp = wp_next_scheduled( $hook );
+foreach ( $entireus_cron_hooks as $entireus_hook ) {
+	$entireus_timestamp = wp_next_scheduled( $entireus_hook );
 
-	if ( $timestamp ) {
-		wp_unschedule_event( $timestamp, $hook );
+	if ( $entireus_timestamp ) {
+		wp_unschedule_event( $entireus_timestamp, $entireus_hook );
 	}
 }
 
 // ── Transients ────────────────────────────────────────────────────────────────
 
-$transients = array(
+$entireus_transients = array(
 	'entireus_sync_status',
 	'entireus_sync_log',
 );
 
-foreach ( $transients as $transient ) {
-	delete_transient( $transient );
+foreach ( $entireus_transients as $entireus_transient ) {
+	delete_transient( $entireus_transient );
 }
 
 // ── Custom tables ─────────────────────────────────────────────────────────────
 
-use EntireUserSync\Sync\Logger;
-
-// Autoloader must be loaded before this.
+// Autoloader must be loaded before using any plugin classes.
 require_once plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
 
-/*
-Logger::drop_table();
+use EntireUserSync\Sync\Logger;
 
-// Multisite: drop on every sub-site.
-if ( is_multisite() ) {
-	foreach ( get_sites( array( 'fields' => 'ids' ) ) as $site_id ) {
-		switch_to_blog( $site_id );
-		Logger::drop_table();
-		restore_current_blog();
-	}
-}*/
+// Custom table cleanup is intentionally disabled on uninstall.

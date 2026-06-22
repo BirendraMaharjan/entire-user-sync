@@ -1,4 +1,10 @@
 <?php
+/**
+ * Admin overview page template.
+ *
+ * @package EntireUserSync
+ */
+
 defined( 'ABSPATH' ) || exit;
 ?>
 

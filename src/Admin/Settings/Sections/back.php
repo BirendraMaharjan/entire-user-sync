@@ -1,9 +1,22 @@
 <?php
+/**
+ * Legacy back-compatibility section definitions.
+ *
+ * @package EntireUserSync\Admin\Settings
+ */
 
 namespace EntireUserSync\Admin\Settings\Sections;
 
-class back {
+/**
+ * Legacy back-compatibility section provider.
+ */
+class Back {
 
+	/**
+	 * Get the legacy section configuration.
+	 *
+	 * @return array
+	 */
 	public function get(): array {
 		return array(
 			'configuration' => array(

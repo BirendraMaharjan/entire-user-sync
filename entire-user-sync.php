@@ -2,26 +2,27 @@
 /**
  * Plugin Name:       Entire User Sync
  * Plugin URI:        https://github.com/BirendraMaharjan/vi-account-manager
- * Description:       Account Manager for WooCommerce.
+ * Description:       User sync for WordPress.
  * Version:           1.0.0
- * Requires at least: 6.5
- * Requires PHP:      8.2
  * Author:            Birendra Maharjan
  * Author URI:        https://www.linkedin.com/in/birendramaharjan/
  * Text Domain:       entire-user-sync
  * Domain Path:       /languages
  * License:           GPL v2 or later
  * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
- * Update URI:        https://github.com/BirendraMaharjan/entire-account-manager
+ *
+ * @package EntireUserSync
+ * @author  Birendra Maharjan
+ * @version 1.0.0
  */
 
 defined( 'ABSPATH' ) || exit;
 
-const ENTIRE_USER_SYNC_FILE = __FILE__;
-define( 'ENTIRE_USER_SYNC_PATH', plugin_dir_path( ENTIRE_USER_SYNC_FILE ) );
-const ENTIRE_USER_SYNC_SECURITY_KEY = 'f8Om2Na9ma4Sh7iv6ay3Ne5pa1Ls9JqP';
+const ENTIREUS_FILE = __FILE__;
+define( 'ENTIREUS_PATH', plugin_dir_path( ENTIREUS_FILE ) );
+const ENTIREUS_SECURITY_KEY = 'f8Om2Na9ma4Sh7iv6ay3Ne5pa1Ls9JqP';
 
-if ( ! file_exists( ENTIRE_USER_SYNC_PATH . 'vendor/autoload.php' ) ) {
+if ( ! file_exists( ENTIREUS_PATH . 'vendor/autoload.php' ) ) {
 
 	add_action(
 		'admin_notices',
@@ -44,15 +45,15 @@ if ( ! file_exists( ENTIRE_USER_SYNC_PATH . 'vendor/autoload.php' ) ) {
 	return;
 }
 
-require_once ENTIRE_USER_SYNC_PATH . 'vendor/autoload.php';
+require_once ENTIREUS_PATH . 'vendor/autoload.php';
 
-// Activation / Deactivation
+// Activation / Deactivation.
 register_activation_hook(
-	ENTIRE_USER_SYNC_FILE,
+	ENTIREUS_FILE,
 	array( 'EntireUserSync\Config\Setup', 'activation' )
 );
 register_deactivation_hook(
-	ENTIRE_USER_SYNC_FILE,
+	ENTIREUS_FILE,
 	array( 'EntireUserSync\Config\Setup', 'deactivation' )
 );
 

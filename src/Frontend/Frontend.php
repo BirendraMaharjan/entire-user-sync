@@ -30,6 +30,8 @@ class Frontend extends Base {
 	 * @since 1.0.0
 	 */
 	public function init(): void {
-		new Assets()->init();
+		// Instantiate Assets helper and initialize hooks.
+		$assets = new Assets();
+		$assets->init();
 	}
 }

@@ -1,23 +1,47 @@
 <?php
+/**
+ * REST API endpoints for Entire User Sync.
+ *
+ * Exposes endpoints for getting user info, syncing users, syncing passwords and deleting users.
+ *
+ * @package EntireUserSync\Sync
+ */
 
 namespace EntireUserSync\Sync;
 
+/**
+ * Class Api
+ */
 class Api {
 
 	use SyncHelper;
 
+	/**
+	 * The secret used to verify incoming signatures.
+	 *
+	 * @var string $secret
+	 */
 	private string $secret;
 
+	/**
+	 * Api constructor.
+	 */
 	public function __construct() {
 		$this->secret = $this->get_secret();
 
 		$this->init();
 	}
 
+	/**
+	 * Register REST hooks on rest_api_init.
+	 */
 	public function init(): void {
 		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
 	}
 
+	/**
+	 * Register REST routes.
+	 */
 	public function register_routes(): void {
 		$args = array(
 			'permission_callback' => array( $this, 'verify_signature' ),
@@ -72,11 +96,15 @@ class Api {
 		);
 	}
 
-
-
+	/**
+	 * Verify incoming request signature and mark request as incoming sync.
+	 *
+	 * @param \WP_REST_Request $request REST request instance.
+	 * @return bool True if signature is valid.
+	 */
 	public function verify_signature( \WP_REST_Request $request ): bool {
 
-		// Mark this as an incoming EntireUS sync request
+		// Mark this as an incoming EntireUS sync request.
 		if ( ! defined( 'ENTIREUS_INCOMING_SYNC' ) ) {
 			define( 'ENTIREUS_INCOMING_SYNC', true );
 		}
@@ -115,8 +143,12 @@ class Api {
 		return $valid;
 	}
 
-
-
+	/**
+	 * Handle get-user endpoint. Authenticate then return limited user info.
+	 *
+	 * @param \WP_REST_Request $request REST request.
+	 * @return \WP_REST_Response Response object.
+	 */
 	public function handle_get_user( \WP_REST_Request $request ): \WP_REST_Response {
 		$params   = $request->get_json_params();
 		$username = sanitize_text_field( $params['username'] ?? '' );
@@ -161,8 +193,12 @@ class Api {
 		);
 	}
 
-
-
+	/**
+	 * Handle syncing (create/update) a user from remote.
+	 *
+	 * @param \WP_REST_Request $request REST request.
+	 * @return \WP_REST_Response
+	 */
 	public function handle_sync_user( \WP_REST_Request $request ): \WP_REST_Response {
 		$data = $request->get_json_params();
 
@@ -170,54 +206,19 @@ class Api {
 			return new \WP_REST_Response( array( 'message' => 'Missing user_email.' ), 400 );
 		}
 
-		$email      = sanitize_email( $data['user_email'] );
-		$existing   = get_user_by( 'email', $email );
-		$user_login = sanitize_user( $data['user_login'] ?? '' ) ?: sanitize_user( strstr( $email, '@', true ) );
-
-		$user_data = array(
-			'user_email'   => $email,
-			'user_login'   => $user_login,
-			'first_name'   => sanitize_text_field( $data['first_name'] ?? '' ),
-			'last_name'    => sanitize_text_field( $data['last_name'] ?? '' ),
-			'display_name' => sanitize_text_field( $data['display_name'] ?? '' ),
-			'user_url'     => esc_url_raw( $data['user_url'] ?? '' ),
-			'description'  => sanitize_textarea_field( $data['description'] ?? '' ),
-			'user_pass'    => ! empty( $data['password_hash'] )
-				? $data['password_hash']
-				: wp_generate_password( 20 ),
-		);
-
-		if ( $existing ) {
-			$user_data['ID'] = $existing->ID;
-			$user_id         = wp_update_user( $user_data );
-		} else {
-			$user_id = wp_insert_user( $user_data );
-		}
+		$email    = sanitize_email( $data['user_email'] );
+		$existing = get_user_by( 'email', $email );
+		$user_id  = $this->save_synced_user( $data, $email, $existing );
 
 		if ( is_wp_error( $user_id ) ) {
 			return new \WP_REST_Response( array( 'message' => $user_id->get_error_message() ), 500 );
 		}
 
+		$this->sync_synced_user_roles( $user_id, $data['roles'] ?? array() );
+		$this->sync_synced_user_meta( $user_id, $data['meta'] ?? array() );
+
 		if ( ! empty( $data['password_hash'] ) ) {
 			$this->write_password_hash( $user_id, $data['password_hash'] );
-		}
-
-		$wp_user = new \WP_User( $user_id );
-
-		if ( ! empty( $data['roles'] ) && is_array( $data['roles'] ) ) {
-			$wp_user->set_role( '' );
-			foreach ( $data['roles'] as $role ) {
-				$role = sanitize_key( $role );
-				if ( get_role( $role ) ) {
-					$wp_user->add_role( $role );
-				}
-			}
-		}
-
-		if ( ! empty( $data['meta'] ) && is_array( $data['meta'] ) ) {
-			foreach ( $data['meta'] as $key => $value ) {
-				update_user_meta( $user_id, sanitize_key( $key ), $value );
-			}
 		}
 
 		$event = $existing ? 'update' : 'create';
@@ -243,8 +244,90 @@ class Api {
 		);
 	}
 
+	/**
+	 * Save a synced user by creating or updating the local account.
+	 *
+	 * @param array    $data     Raw request payload.
+	 * @param string   $email    Sanitized email.
+	 * @param \WP_User $existing Existing user, when found.
+	 * @return int|\WP_Error User ID or error.
+	 */
+	private function save_synced_user( array $data, string $email, ?\WP_User $existing ) {
+		$user_data = array(
+			'user_email'   => $email,
+			'user_login'   => $this->resolve_user_login( $data, $email ),
+			'first_name'   => sanitize_text_field( $data['first_name'] ?? '' ),
+			'last_name'    => sanitize_text_field( $data['last_name'] ?? '' ),
+			'display_name' => sanitize_text_field( $data['display_name'] ?? '' ),
+			'user_url'     => esc_url_raw( $data['user_url'] ?? '' ),
+			'description'  => sanitize_textarea_field( $data['description'] ?? '' ),
+			'user_pass'    => ! empty( $data['password_hash'] ) ? $data['password_hash'] : wp_generate_password( 20 ),
+		);
 
+		if ( $existing ) {
+			$user_data['ID'] = $existing->ID;
+			return wp_update_user( $user_data );
+		}
 
+		return wp_insert_user( $user_data );
+	}
+
+	/**
+	 * Resolve a usable login name from the payload.
+	 *
+	 * @param array  $data Request payload.
+	 * @param string $email Sanitized email.
+	 * @return string
+	 */
+	private function resolve_user_login( array $data, string $email ): string {
+		$user_login = sanitize_user( $data['user_login'] ?? '' );
+		if ( empty( $user_login ) ) {
+			$user_login = sanitize_user( strstr( $email, '@', true ) );
+		}
+
+		return $user_login;
+	}
+
+	/**
+	 * Sync remote roles to the local account.
+	 *
+	 * @param int   $user_id User ID.
+	 * @param array $roles Requested roles.
+	 */
+	private function sync_synced_user_roles( int $user_id, array $roles ): void {
+		if ( empty( $roles ) ) {
+			return;
+		}
+
+		$wp_user = new \WP_User( $user_id );
+		$wp_user->set_role( '' );
+
+		foreach ( $roles as $role ) {
+			$role = sanitize_key( $role );
+			if ( get_role( $role ) ) {
+				$wp_user->add_role( $role );
+			}
+		}
+	}
+
+	/**
+	 * Sync remote meta values to the local account.
+	 *
+	 * @param int   $user_id User ID.
+	 * @param array $meta    Meta values.
+	 */
+	private function sync_synced_user_meta( int $user_id, array $meta ): void {
+		foreach ( $meta as $key => $value ) {
+			update_user_meta( $user_id, sanitize_key( $key ), $value );
+		}
+	}
+
+	/**
+	 * Handle syncing a password hash from remote.
+	 *
+	 * @param \WP_REST_Request $request REST request.
+	 * @return \WP_REST_Response
+	 */
 	public function handle_sync_password( \WP_REST_Request $request ): \WP_REST_Response {
 		$data  = $request->get_json_params();
 		$email = sanitize_email( $data['user_email'] ?? '' );
@@ -279,8 +362,12 @@ class Api {
 		return new \WP_REST_Response( array( 'message' => 'Password synced.' ), 200 );
 	}
 
-
-
+	/**
+	 * Handle deleting a local user from a remote request.
+	 *
+	 * @param \WP_REST_Request $request REST request.
+	 * @return \WP_REST_Response
+	 */
 	public function handle_delete_user( \WP_REST_Request $request ): \WP_REST_Response {
 		$data  = $request->get_json_params();
 		$email = sanitize_email( $data['email'] ?? '' );
@@ -316,8 +403,12 @@ class Api {
 		);
 	}
 
-
-
+	/**
+	 * Low-level DB update for user password.
+	 *
+	 * @param int    $user_id User ID.
+	 * @param string $hash    Stored password hash.
+	 */
 	private function write_password_hash( int $user_id, string $hash ): void {
 		global $wpdb;
 		$wpdb->update(

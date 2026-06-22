@@ -1,19 +1,48 @@
 <?php
+/**
+ * Sender for outgoing sync requests.
+ *
+ * Sends local user changes to configured remote sites.
+ *
+ * @package EntireUserSync\Sync
+ */
 
 namespace EntireUserSync\Sync;
 
 use WP_User;
 
+/**
+ * Sender.
+ *
+ * Sends local user changes to configured remote sites.
+ *
+ * @package EntireUserSync\Sync
+ */
 class Sender {
 
 	use SyncHelper;
 
+	/**
+	 * Key for signing requests, shared with remote sites.
+	 *
+	 * @var string Secret.
+	 */
 	private string $secret;
 
+	/**
+	 * Constructor.
+	 */
 	public function __construct() {
 		$this->secret = $this->get_secret();
 	}
 
+	/**
+	 * Sync a single user to configured remote sites.
+	 *
+	 * @param int $user_id User ID.
+	 *
+	 * @return array Results per site.
+	 */
 	public function sync_user( int $user_id ): array {
 		$user = get_userdata( $user_id );
 
@@ -42,6 +71,15 @@ class Sender {
 		return $results;
 	}
 
+	/**
+	 * Bulk sync all users (used by admin tools).
+	 *
+	 * @param array $sites Sites to send to.
+	 * @param array $roles Roles to include.
+	 * @param array $meta_keys Meta keys to include.
+	 *
+	 * @return array Results per site.
+	 */
 	public function sync_all_users( array $sites, array $roles, array $meta_keys ): array {
 		$args = array(
 			'number' => - 1,
@@ -77,7 +115,14 @@ class Sender {
 		return $results;
 	}
 
-	public function delete_user( string $email, array $sites ): array {
+	/**
+	 * Request remote sites to delete a user.
+	 *
+	 * @param string $email User email.
+	 *
+	 * @return array Results per site.
+	 */
+	public function delete_user( string $email ): array {
 		$results = array();
 
 		foreach ( $this->get_active_sites() as $site ) {
@@ -105,6 +150,15 @@ class Sender {
 		return $results;
 	}
 
+	/**
+	 * Sync a user's password hash to remote sites.
+	 *
+	 * @param string $email User email.
+	 * @param string $password_hash Stored password hash.
+	 * @param array  $sites Sites to contact.
+	 *
+	 * @return array Results per site.
+	 */
 	public function sync_password( string $email, string $password_hash, array $sites ): array {
 		$results = array();
 
@@ -137,6 +191,13 @@ class Sender {
 		return $results;
 	}
 
+	/**
+	 * Build the outgoing payload for a user.
+	 *
+	 * @param WP_User $user User object.
+	 *
+	 * @return array Payload array.
+	 */
 	private function build_payload( WP_User $user ): array {
 		$payload = array(
 			'user_login'    => $user->user_login,
@@ -164,6 +225,15 @@ class Sender {
 		return $payload;
 	}
 
+	/**
+	 * Send a signed HTTP request to an endpoint.
+	 *
+	 * @param string $endpoint URL to call.
+	 * @param array  $data Data to send.
+	 * @param string $method HTTP method.
+	 *
+	 * @return array Response summary.
+	 */
 	public function send_request( string $endpoint, array $data, string $method = 'POST' ): array {
 		$body      = wp_json_encode( $data );
 		$signature = hash_hmac( 'sha256', $body, $this->secret );
@@ -200,10 +270,25 @@ class Sender {
 		);
 	}
 
+	/**
+	 * Build a full REST endpoint for a site.
+	 *
+	 * @param array  $site Site config.
+	 * @param string $route Route name.
+	 *
+	 * @return string Full URL endpoint.
+	 */
 	private function endpoint( array $site, string $route ): string {
 		return trailingslashit( $site['url'] ?? '' ) . 'wp-json/entireus/v1/' . $route;
 	}
 
+	/**
+	 * Return a human-friendly site key for result indexing.
+	 *
+	 * @param array $site Site config.
+	 *
+	 * @return string Key.
+	 */
 	private function site_key( array $site ): string {
 		if ( ! empty( $site['label'] ) ) {
 			return (string) $site['label'];

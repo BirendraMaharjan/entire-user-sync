@@ -1,8 +1,15 @@
 <?php
+/**
+ * Admin page wrapper template.
+ *
+ * Renders the shared header, settings-saved notice, and the requested page partial.
+ *
+ * @package EntireUserSync
+ */
 
 defined( 'ABSPATH' ) || exit;
 
-$updated = isset( $_GET['settings-updated'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- No form submission.
+$entireus_updated = isset( $_GET['settings-updated'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- No form submission.
 ?>
 <div class="entire-admin-wrap">
 	<!-- Header -->
@@ -30,7 +37,7 @@ $updated = isset( $_GET['settings-updated'] ); // phpcs:ignore WordPress.Securit
 	</div>
 
 	<!-- Notice -->
-	<?php if ( $updated ) : ?>
+	<?php if ( $entireus_updated ) : ?>
 		<div class="entire-admin-notice entire-admin-notice--success">
 			<strong>
 				<?php esc_html_e( 'Settings saved successfully.', 'entire-user-sync' ); ?>
@@ -40,10 +47,10 @@ $updated = isset( $_GET['settings-updated'] ); // phpcs:ignore WordPress.Securit
 
 	<div class="entire-admin-body">
 		<?php
-		$file = $plugin->template_path() . '/admin/pages/' . $page . '.php';
+		$entireus_file = $plugin->template_path() . '/admin/pages/' . $page . '.php';
 
-		if ( is_readable( $file ) ) {
-			require $file;
+		if ( is_readable( $entireus_file ) ) {
+			require $entireus_file;
 		} else {
 			echo '<div class="notice notice-error">' . esc_html__( 'Page not found.', 'entire-user-sync' ) . '</div>';
 		}

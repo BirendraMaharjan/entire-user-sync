@@ -1,29 +1,57 @@
 <?php
+/**
+ * Sync service.
+ *
+ * Handles automatic user sync triggers, incoming remote lookups and user creation.
+ *
+ * @package EntireUserSync
+ */
 
 namespace EntireUserSync\Sync;
 
 use EntireUserSync\Common\Abstracts\Base;
 use EntireUserSync\Common\Traits\Requester;
 
+/**
+ * Class Sync
+ *
+ * Coordinates sync triggers, inbound authentication and user creation.
+ */
 class Sync extends Base {
 
 	use SyncHelper;
 	use Requester;
 
+	/**
+	 * Sync sender helper.
+	 *
+	 * @var Sender
+	 */
 	public Sender $sender;
+
+	/**
+	 * REST API helper.
+	 *
+	 * @var Api
+	 */
 	public Api $api;
 
+	/**
+	 * Sync constructor.
+	 */
 	public function __construct() {
 		parent::__construct();
 
-		// var_dump($this->enable_logging());
-
+		// Initialize helpers.
 		$this->sender = new Sender();
 		$this->api    = new Api();
 
 		$this->init();
 	}
 
+	/**
+	 * Register hooks for sync operations.
+	 */
 	public function init(): void {
 
 		add_action( 'user_register', array( $this, 'maybe_auto_sync_user' ) );
@@ -42,6 +70,12 @@ class Sync extends Base {
 		add_action( 'wp_login', array( $this, 'on_local_login' ), 10, 2 );
 	}
 
+	/**
+	 * Decide whether the user should be synced outbound.
+	 *
+	 * @param int $user_id User ID.
+	 * @return bool True if allowed, false otherwise.
+	 */
 	public function allow_sync( int $user_id ): bool {
 
 		if ( defined( 'ENTIREUS_INCOMING_SYNC' ) || ! $this->auto_sync() ) {
@@ -81,6 +115,12 @@ class Sync extends Base {
 
 		return true;
 	}
+
+	/**
+	 * Triggered when a user is registered/updated; conditionally send the user.
+	 *
+	 * @param int $user_id User ID.
+	 */
 	public function maybe_auto_sync_user( int $user_id ): void {
 
 		if ( ! $this->allow_sync( $user_id ) ) {
@@ -90,10 +130,20 @@ class Sync extends Base {
 		$this->sender->sync_user( $user_id );
 	}
 
+	/**
+	 * Proxy for role changes to sync.
+	 *
+	 * @param int $user_id User ID.
+	 */
 	public function maybe_auto_sync_user_role( int $user_id ): void {
 		$this->maybe_auto_sync_user( $user_id );
 	}
 
+	/**
+	 * Conditionally delete a user on remote sites when local user is removed.
+	 *
+	 * @param int $user_id User ID.
+	 */
 	public function maybe_auto_delete_user( int $user_id ): void {
 		if ( ! $this->allow_sync( $user_id ) ) {
 			return;
@@ -105,11 +155,22 @@ class Sync extends Base {
 		$this->sender->delete_user( $user->user_email, $this->get_sites() );
 	}
 
-
+	/**
+	 * Handle password reset event.
+	 *
+	 * @param \WP_User $user User object.
+	 * @param string   $new_pass New password.
+	 */
 	public function on_password_reset( \WP_User $user, string $new_pass ): void {
 		$this->push_password_hash( $user );
 	}
 
+	/**
+	 * Handle low-level set password action.
+	 *
+	 * @param string $password New password.
+	 * @param int    $user_id  User ID.
+	 */
 	public function on_set_password( string $password, int $user_id ): void {
 		if ( ! $this->allow_sync( $user_id ) ) {
 			return;
@@ -121,10 +182,21 @@ class Sync extends Base {
 		}
 	}
 
+	/**
+	 * On local login, push password hash to remotes.
+	 *
+	 * @param string   $user_login Username.
+	 * @param \WP_User $user User object.
+	 */
 	public function on_local_login( string $user_login, \WP_User $user ): void {
 		$this->push_password_hash( $user );
 	}
 
+	/**
+	 * Push password hash to remote sites for the user.
+	 *
+	 * @param \WP_User $user User instance.
+	 */
 	private function push_password_hash( \WP_User $user ): void {
 		$sites = $this->get_sites();
 		if ( empty( $sites ) ) {
@@ -134,7 +206,14 @@ class Sync extends Base {
 		$this->sender->sync_password( $user->user_email, $user->user_pass, $sites );
 	}
 
-
+	/**
+	 * Attempt to authenticate by checking remote sites for the user.
+	 *
+	 * @param mixed  $user     WP_User or other auth value.
+	 * @param string $username Username.
+	 * @param string $password Password.
+	 * @return mixed WP_User or original $user on failure.
+	 */
 	public function maybe_import_remote_user( $user, string $username, string $password ) {
 		if ( $user instanceof \WP_User ) {
 			return $user;
@@ -197,7 +276,14 @@ class Sync extends Base {
 		return $user;
 	}
 
-
+	/**
+	 * Fetch a user from a remote site via REST.
+	 *
+	 * @param string $username Username to check.
+	 * @param string $password Password to verify.
+	 * @param array  $site     Site configuration (url, key, etc.).
+	 * @return array|\WP_Error Remote user array or WP_Error on failure.
+	 */
 	private function fetch_remote_user( string $username, string $password, array $site ): array|\WP_Error {
 		$endpoint  = trailingslashit( $site['url'] ) . 'wp-json/entireus/v1/get-user';
 		$body      = wp_json_encode(
@@ -234,19 +320,23 @@ class Sync extends Base {
 		return $data['user'] ?? new \WP_Error( 'entireus_no_user', 'No user in response' );
 	}
 
-
+	/**
+	 * Create or update a local user from remote payload.
+	 *
+	 * @param array $remote    Remote user payload.
+	 * @param array $meta_keys Allowed meta keys to sync.
+	 * @return \WP_User|\WP_Error Local WP_User instance or WP_Error on failure.
+	 */
 	private function create_local_user( array $remote, array $meta_keys ): \WP_User|\WP_Error {
 		$email = sanitize_email( $remote['user_email'] ?? '' );
 		if ( ! $email ) {
 			return new \WP_Error( 'entireus_bad_email', 'Remote user has no email' );
 		}
 
-		$existing   = get_user_by( 'email', $email );
-		$user_login = sanitize_user( $remote['user_login'] ?? '' ) ?: sanitize_user( strstr( $email, '@', true ) );
+		$existing = get_user_by( 'email', $email );
 
-		if ( ! $existing && username_exists( $user_login ) ) {
-			$user_login .= '_' . substr( md5( $email ), 0, 5 );
-		}
+		// Build a safe user_login string (moved to helper to reduce complexity).
+		$user_login = $this->build_user_login( $remote, $email, $existing );
 
 		$user_data = array(
 			'user_login'   => $user_login,
@@ -289,27 +379,72 @@ class Sync extends Base {
 		$wp_user = new \WP_User( $user_id );
 
 		if ( ! empty( $remote['roles'] ) && is_array( $remote['roles'] ) ) {
-			$allowed = $this->get_roles();
-			$wp_user->set_role( '' );
-			foreach ( $remote['roles'] as $role ) {
-				$role = sanitize_key( $role );
-				if ( get_role( $role ) && ( empty( $allowed ) || in_array( $role, $allowed, true ) ) ) {
-					$wp_user->add_role( $role );
-				}
-			}
+			$this->apply_roles( $wp_user, $remote['roles'], $this->get_roles() );
 		}
 
 		if ( ! empty( $remote['meta'] ) && is_array( $remote['meta'] ) ) {
-			foreach ( $remote['meta'] as $key => $value ) {
-				$key = sanitize_key( $key );
-				if ( empty( $meta_keys ) || in_array( $key, $meta_keys, true ) ) {
-					update_user_meta( $user_id, $key, $value );
-				}
-			}
+			$this->apply_meta( $user_id, $remote['meta'], $meta_keys );
 		}
 
 		update_user_meta( $user_id, '_entireus_imported_from', sanitize_text_field( $remote['site_url'] ?? '' ) );
 
 		return $wp_user;
+	}
+
+	/**
+	 * Build a safe user_login string from remote payload or email.
+	 *
+	 * @param array               $remote Remote payload.
+	 * @param string              $email Sanitized user email.
+	 * @param \WP_User|false|null $existing Existing local user if any.
+	 * @return string
+	 */
+	private function build_user_login( array $remote, string $email, $existing ): string {
+		// Prefer remote user_login when provided; fall back to the local part of the email.
+		$user_login = sanitize_user( $remote['user_login'] ?? '' );
+		if ( empty( $user_login ) ) {
+			$user_login = sanitize_user( strstr( $email, '@', true ) );
+		}
+
+		if ( ! $existing && username_exists( $user_login ) ) {
+			$user_login .= '_' . substr( md5( $email ), 0, 5 );
+		}
+
+		return $user_login;
+	}
+
+	/**
+	 * Apply roles to a WP_User instance, filtering by allowed list.
+	 *
+	 * @param \WP_User $wp_user User object to modify.
+	 * @param array    $roles Roles from remote payload.
+	 * @param array    $allowed Allowed roles from settings.
+	 * @return void
+	 */
+	private function apply_roles( \WP_User $wp_user, array $roles, array $allowed ): void {
+		$wp_user->set_role( '' );
+		foreach ( $roles as $role ) {
+			$role = sanitize_key( $role );
+			if ( get_role( $role ) && ( empty( $allowed ) || in_array( $role, $allowed, true ) ) ) {
+				$wp_user->add_role( $role );
+			}
+		}
+	}
+
+	/**
+	 * Apply user meta from remote payload respecting allowed meta keys.
+	 *
+	 * @param int   $user_id User ID to update.
+	 * @param array $meta Meta array from remote.
+	 * @param array $meta_keys Allowed meta keys.
+	 * @return void
+	 */
+	private function apply_meta( int $user_id, array $meta, array $meta_keys ): void {
+		foreach ( $meta as $key => $value ) {
+			$key = sanitize_key( $key );
+			if ( empty( $meta_keys ) || in_array( $key, $meta_keys, true ) ) {
+				update_user_meta( $user_id, $key, $value );
+			}
+		}
 	}
 }
