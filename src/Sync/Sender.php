@@ -47,7 +47,6 @@ class Sender {
 					'direction'   => 'outgoing',
 					'user_email'  => $user->user_email,
 					'target_site' => $site['url'],
-					'site_url'    => site_url(),
 					'status'      => $response['status'],
 					'message'     => $response['message'] ?? '',
 					'payload'     => $payload,
