@@ -8,7 +8,7 @@
 defined( 'ABSPATH' ) || exit;
 ?>
 <div class="entire-admin-navigation">
-	<?php $setting->navigation() ?>
+	<?php $setting->navigation(); ?>
 </div>
 
 <!-- Content -->

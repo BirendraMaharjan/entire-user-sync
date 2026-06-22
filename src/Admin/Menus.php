@@ -129,11 +129,11 @@ class Menus extends Base {
 		}
 
 		$raw_page = sanitize_key( $_GET['page'] ?? $this->plugin->slug() );
-		$prefix = $this->plugin->slug() . '-';
+		$prefix   = $this->plugin->slug() . '-';
 
 		$setting  = new Settings();
 		$sections = $setting->get_sections();
-		$page = array_key_first( $sections );
+		$page     = array_key_first( $sections );
 
 		if ( str_starts_with( $raw_page, $prefix ) ) {
 			$page = substr( $raw_page, strlen( $prefix ) );

@@ -17,9 +17,9 @@ class Integrations {
 	public function fields(): array {
 		return array(
 			'secret_key' => array(
-				'label'   => __( 'Secret Key', 'entire-user-sync' ),
-				'type'    => 'text',
-				'default' => ENTIRE_USER_SYNC_SECURITY_KEY,
+				'label'    => __( 'Secret Key', 'entire-user-sync' ),
+				'type'     => 'text',
+				'default'  => ENTIRE_USER_SYNC_SECURITY_KEY,
 				'required' => true,
 			),
 		);

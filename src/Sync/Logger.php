@@ -2,12 +2,23 @@
 
 namespace EntireUserSync\Sync;
 
+/**
+ * Logger for sync events stored in the database.
+ *
+ * Responsible for writing and querying sync logs. Uses the WPDB interface
+ * and takes care to sanitize inputs and redact sensitive payload fields.
+ */
 class Logger {
 
 	use SyncHelper;
 
 	public const TABLE = 'entireus_logs';
 
+	/**
+	 * Write a log entry.
+	 *
+	 * @param array $args Log arguments: event, direction, user_email, source_site, target_site, status, message, payload.
+	 */
 	public function log( array $args ): void {
 
 		global $wpdb;
@@ -32,10 +43,16 @@ class Logger {
 		);
 	}
 
+	/**
+	 * Query log rows with filtering, sorting and pagination.
+	 *
+	 * @param array $args Filtering and pagination args.
+	 * @return array{rows: array, total: int, pages: int}
+	 */
 	public static function query( array $args = array() ): array {
 		global $wpdb;
 
-		$table    = $wpdb->prefix . self::TABLE;
+		$table = $wpdb->prefix . self::TABLE;
 
 		$per_page = max( 1, (int) ( $args['per_page'] ?? 50 ) );
 		$page     = max( 1, (int) ( $args['paged'] ?? 1 ) );
@@ -85,40 +102,46 @@ class Logger {
 
 		$where_sql = $where ? 'WHERE ' . implode( ' AND ', $where ) : '';
 
-		$count_sql = "SELECT COUNT(*) FROM `{$table}` {$where_sql}";
-		$total     = (int) ( $values
-		? $wpdb->get_var( $wpdb->prepare( $count_sql, $values ) )
-		: $wpdb->get_var( $count_sql ) );
+		if ( $values ) {
+			// Build and prepare count query. Table name is safe (built from $wpdb->prefix).
+			$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `{$table}` {$where_sql}", ...$values ) );
+		} else {
+			$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `{$table}` {$where_sql}" );
+		}
 
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT * FROM {$table} {$where_sql} ORDER BY {$orderby} {$order} LIMIT %d OFFSET %d",
-				array_merge( $values, array( $per_page, $offset ) )
+				"SELECT * FROM `{$table}` {$where_sql} ORDER BY {$orderby} {$order} LIMIT %d OFFSET %d",
+				...array_merge( $values, array( $per_page, $offset ) )
 			),
 			ARRAY_A
 		);
 
 		return array(
-			'rows'  => $rows ?: array(),
+			'rows'  => $rows ? $rows : array(),
 			'total' => $total,
 			'pages' => $total ? (int) ceil( $total / $per_page ) : 1,
 		);
 	}
 
+	/**
+	 * Prune old log entries.
+	 *
+	 * @param int $days Number of days to keep.
+	 * @return int Number of rows deleted.
+	 */
 	public static function prune( int $days = 90 ): int {
 		global $wpdb;
 
 		$table_name = $wpdb->prefix . self::TABLE;
 
-		return (int) $wpdb->query(
-			$wpdb->prepare(
-				'DELETE FROM %i WHERE created_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL %d DAY)',
-				$table_name,
-				$days
-			)
-		);
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table_name is built from $wpdb->prefix and internal constant.
+		return (int) $wpdb->query( $wpdb->prepare( "DELETE FROM `{$table_name}` WHERE created_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL %d DAY)", $days ) );
 	}
 
+	/**
+	 * Create the logs table if missing.
+	 */
 	public static function create_table(): void {
 		global $wpdb;
 
@@ -147,19 +170,23 @@ class Logger {
 		dbDelta( $sql );
 	}
 
+	/**
+	 * Drop the logs table.
+	 */
 	public static function drop_table(): void {
 		global $wpdb;
 
 		$table_name = $wpdb->prefix . self::TABLE;
 
-		$wpdb->query(
-			$wpdb->prepare(
-				'DROP TABLE IF EXISTS %i',
-				$table_name
-			)
-		);
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table_name is safe.
+		$wpdb->query( "DROP TABLE IF EXISTS `{$table_name}`" );
 	}
 
+	/**
+	 * Redact sensitive keys from data arrays.
+	 *
+	 * @param array $data Passed by reference and modified in-place.
+	 */
 	private static function strip_sensitive( array &$data ): void {
 		$blocked = array( 'password_hash', 'user_pass', 'password', 'pass' );
 		foreach ( $blocked as $key ) {

@@ -260,15 +260,15 @@ class Settings extends Base {
 
 
 	public function render_field( $args ) {
-		$option_name        = $args['option_name'];
-		$field_key          = $args['field_key'];
-		$field              = $args['field'];
-		$options            = get_option( $option_name, array() );
-		$value              = $options[ $field_key ] ?? $field['default'];
-		$type               = $field['type'] ?? 'text';
-		$required           = ! empty( $field['required'] ) ? 'required' : '';
-		$name               = esc_attr( $option_name ) . '[' . esc_attr( $field_key ) . ']';
-		$id                 = esc_attr( $field_key );
+		$option_name = $args['option_name'];
+		$field_key   = $args['field_key'];
+		$field       = $args['field'];
+		$options     = get_option( $option_name, array() );
+		$value       = $options[ $field_key ] ?? $field['default'];
+		$type        = $field['type'] ?? 'text';
+		$required    = ! empty( $field['required'] ) ? 'required' : '';
+		$name        = esc_attr( $option_name ) . '[' . esc_attr( $field_key ) . ']';
+		$id          = esc_attr( $field_key );
 
 		switch ( $type ) {
 
@@ -452,7 +452,7 @@ class Settings extends Base {
 
 			case 'image':
 				$attachment_id = absint( $value );
-				$img_url    = $attachment_id ? wp_get_attachment_image_url( $attachment_id, 'thumbnail' ) : '';
+				$img_url       = $attachment_id ? wp_get_attachment_image_url( $attachment_id, 'thumbnail' ) : '';
 				?>
 				<div class="entire-image-field" data-field="<?php echo esc_attr( $id ); ?>">
 					<input
@@ -489,7 +489,7 @@ class Settings extends Base {
 				<?php
 				break;
 			case 'repeater':
-				$rows = is_array( $value ) ? $value : array();
+				$rows       = is_array( $value ) ? $value : array();
 				$sub_fields = $field['sub_fields'] ?? array();
 				$name_base  = $option_name . '[' . $field_key . ']';
 				?>

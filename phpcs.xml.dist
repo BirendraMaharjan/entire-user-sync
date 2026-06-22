@@ -90,7 +90,7 @@
     <rule ref="WordPress.WP.I18n">
         <properties>
             <property name="text_domain" type="array">
-                <element value="entire-account-manager"/>
+                <element value="entire-user-sync"/>
             </property>
         </properties>
     </rule>
@@ -99,9 +99,9 @@
     <rule ref="WordPress.Utils.I18nTextDomainFixer">
     	<properties>
     		<property name="old_text_domain" type="array">
-    			<element value="vi-bonus-"/>
+    			<element value="entire-account-manager"/>
     		</property>
-    		<property name="new_text_domain" value="entire-account-manager"/>
+    		<property name="new_text_domain" value="entire-user-sync"/>
     	</properties>
     </rule>
 
@@ -111,11 +111,13 @@
     <!-- ======================= -->
     <rule ref="WordPress.NamingConventions.PrefixAllGlobals">
         <properties>
-            <property name="prefixes" type="array">
-                <element value="entire"/>
-                <element value="ENTIRE_"/>
-                <element value="eam_"/>
-            </property>
+                <property name="prefixes" type="array">
+                    <element value="entire" />
+                    <element value="ENTIRE_" />
+                    <element value="eam_" />
+                    <element value="eus_" />
+                    <element value="EUS_" />
+                </property>
         </properties>
     </rule>
 

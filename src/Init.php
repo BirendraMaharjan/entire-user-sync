@@ -76,6 +76,6 @@ final class Init extends Base {
 			( new Frontend() )->init();
 		}
 
-		//new Sync();
+		// new Sync();
 	}
 }
