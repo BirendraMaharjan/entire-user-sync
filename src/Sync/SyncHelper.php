@@ -122,7 +122,7 @@ trait SyncHelper {
 	 * Return configured meta keys to include in payloads.
 	 */
 	public function get_meta_keys(): array {
-		return $this->settings()->get( 'configuration', 'option_meta' ) ?? array();
+		return $this->settings()->get( 'configuration', 'sync_meta_keys' ) ?? array();
 	}
 
 	/**
