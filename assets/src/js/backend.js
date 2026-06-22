@@ -9,11 +9,11 @@ import '../scss/backend.scss';
 		// Reset Section
 		// -------------------------------------------------------------------------
 
-		$( document ).on( 'click', '.your-plugin-reset', function () {
+		$( document ).on( 'click', '.entire-setting-reset', function () {
 			const $btn = $( this );
 			const section = $btn.data( 'section' );
-			const $wrap = $btn.closest( '.your-plugin-section' );
-			const $notice = $wrap.find( '.your-plugin-reset-notice' );
+			const $wrap = $btn.closest( '.entire-setting-section' );
+			const $notice = $wrap.find( '.entire-setting-reset-notice' );
 
 			if ( ! window.confirm( config.i18n.confirmReset ) ) {
 				return;
@@ -23,7 +23,7 @@ import '../scss/backend.scss';
 			$notice.hide();
 
 			$.post( config.ajaxUrl, {
-				action: 'your_plugin_reset_section',
+				action: 'entire_reset_section',
 				nonce: config.nonce,
 				section: section,
 			} )
@@ -61,8 +61,8 @@ import '../scss/backend.scss';
 					 } else if ( 'hidden' === type ) {
 						 // Image field — clear preview.
 						 $field.val( '' );
-						 $wrap.find( '.your-plugin-image-preview' ).empty();
-						 $wrap.find( '.your-plugin-remove-image' ).hide();
+						 $wrap.find( '.entire-image-preview' ).empty();
+						 $wrap.find( '.entire-remove-image' ).hide();
 
 					 } else {
 						 $field.val( value );
@@ -83,12 +83,12 @@ import '../scss/backend.scss';
 		// Image Upload (wp.media)
 		// -------------------------------------------------------------------------
 
-		$( document ).on( 'click', '.your-plugin-upload-image', function ( e ) {
+		$( document ).on( 'click', '.entire-upload-image', function ( e ) {
 			e.preventDefault();
 
 			const $btn = $( this );
 			const fieldId = $btn.data( 'field' );
-			const $wrap = $btn.closest( '.your-plugin-image-field' );
+			const $wrap = $btn.closest( '.entire-image-field' );
 
 			const frame = wp.media( {
 				title: config.i18n.uploadTitle,
@@ -101,10 +101,10 @@ import '../scss/backend.scss';
 				const attachment = frame.state().get( 'selection' ).first().toJSON();
 
 				$wrap.find( '#' + fieldId ).val( attachment.id );
-				$wrap.find( '.your-plugin-image-preview' ).html(
+				$wrap.find( '.entire-image-preview' ).html(
 					'<img src="' + attachment.sizes.thumbnail.url + '" style="max-width:150px;display:block;margin-bottom:8px;"  alt=""/>'
 				);
-				$wrap.find( '.your-plugin-remove-image' ).show();
+				$wrap.find( '.entire-remove-image' ).show();
 			} );
 
 			frame.open();
@@ -114,14 +114,14 @@ import '../scss/backend.scss';
 		// Image Remove
 		// -------------------------------------------------------------------------
 
-		$( document ).on( 'click', '.your-plugin-remove-image', function ( e ) {
+		$( document ).on( 'click', '.entire-remove-image', function ( e ) {
 			e.preventDefault();
 
 			var fieldId = $( this ).data( 'field' );
-			var $wrap = $( this ).closest( '.your-plugin-image-field' );
+			var $wrap = $( this ).closest( '.entire-image-field' );
 
 			$wrap.find( '#' + fieldId ).val( '' );
-			$wrap.find( '.your-plugin-image-preview' ).empty();
+			$wrap.find( '.entire-image-preview' ).empty();
 			$( this ).hide();
 		} );
 
@@ -129,18 +129,18 @@ import '../scss/backend.scss';
 		// REPEATER
 		// =========================================================================
 
-		$( document ).on( 'click', '.your-plugin-add-row', function () {
+		$( document ).on( 'click', '.entire-add-row', function () {
 			const $btn = $( this );
-			const $rows = $btn.siblings( '.your-plugin-repeater-rows' );
-			const nameBase = $btn.closest( '.your-plugin-repeater' ).data( 'name-base' );
+			const $rows = $btn.siblings( '.entire-repeater-rows' );
+			const nameBase = $btn.closest( '.entire-repeater' ).data( 'name-base' );
 			const subFields = $btn.data( 'sub-fields' );
-			const index = $rows.children( '.your-plugin-repeater-row' ).length;
+			const index = $rows.children( '.entire-repeater-row' ).length;
 
-			const $row = $( '<div class="your-plugin-repeater-row"></div>' );
+			const $row = $( '<div class="entire-repeater-row"></div>' );
 
 			$.each( subFields, function ( subKey, subField ) {
 				const name = nameBase + '[' + index + '][' + subKey + ']';
-				const $col = $( '<div class="your-plugin-repeater-col"></div>' );
+				const $col = $( '<div class="entire-repeater-col"></div>' );
 				const label = $( '<label></label>' ).text( subField.label );
 				let $input;
 
@@ -168,12 +168,12 @@ import '../scss/backend.scss';
 				$row.append( $col );
 			} );
 
-			$row.append( '<button type="button" class="button your-plugin-remove-row">&#x2715;</button>' );
+			$row.append( '<button type="button" class="button entire-remove-row">&#x2715;</button>' );
 			$rows.append( $row );
 		} );
 
-		$( document ).on( 'click', '.your-plugin-remove-row', function () {
-			$( this ).closest( '.your-plugin-repeater-row' ).remove();
+		$( document ).on( 'click', '.entire-remove-row', function () {
+			$( this ).closest( '.entire-repeater-row' ).remove();
 		} );
 
 		// =========================================================================
@@ -181,10 +181,10 @@ import '../scss/backend.scss';
 		// =========================================================================
 
 		$( function () {
-			$( '.your-plugin-select2' ).select2( {
+			$( '.entire-select2' ).select2( {
 				width: 'resolve',
 				allowClear: true,
-				closeOnSelect: false,     // keep dropdown open for multi-pick.
+				closeOnSelect: false,
 			} );
 		} );
 

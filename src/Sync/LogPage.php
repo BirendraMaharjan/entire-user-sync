@@ -7,7 +7,7 @@ use EntireUserSync\Common\Abstracts\Base;
 class LogPage extends Base {
 
 	private const MENU_SLUG_SUFFIX = '-logs';
-	private const DEFAULT_PER_PAGE = 10;
+	private const DEFAULT_PER_PAGE = 50;
 	private const PRUNE_ACTION     = 'entireus_prune_logs';
 
 	private const EVENT_BADGES = array(

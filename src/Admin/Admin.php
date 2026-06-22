@@ -32,8 +32,8 @@ class Admin extends Base {
 	 * @since 1.0.0
 	 */
 	public function init(): void {
-		new Menus()->init();
-		new Assets()->init();
+		( new Menus() )->init();
+		( new Assets() )->init();
 
 		new Settings();
 	}

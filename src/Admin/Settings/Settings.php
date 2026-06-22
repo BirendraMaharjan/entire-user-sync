@@ -8,14 +8,14 @@ defined( 'ABSPATH' ) || exit;
 
 class Settings extends Base {
 
-	private static string $option_name;
+	public string $setting_option_name;
 
-	private array $sections = array();
+	private array $sections;
 
 	public function __construct() {
 		parent::__construct();
 
-		self::$option_name = $this->plugin->prefix();
+		$this->setting_option_name = $this->plugin->prefix();
 
 		$this->init_hooks();
 	}
@@ -24,7 +24,7 @@ class Settings extends Base {
 
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 
-		add_action( 'wp_ajax_your_plugin_reset_section', array( $this, 'ajax_reset_section' ) );
+		add_action( 'wp_ajax_entire_reset_section', array( $this, 'ajax_reset_section' ) );
 	}
 
 	public function sections(): array {
@@ -37,15 +37,15 @@ class Settings extends Base {
 
 	public function get_sections() {
 		return array_merge(
-			( new Sections\Setup() )->get(),
-			( new Sections\Configuration() )->get(),
-			( new Sections\Integrations() )->get(),
+			( new Sections\Setup() )->get_section(),
+			( new Sections\Configuration() )->get_section(),
+			( new Sections\Integrations() )->get_section(),
 		);
 	}
 
 	public function register_settings() {
 		foreach ( $this->sections() as $section_key => $section ) {
-			$option_name = self::$option_name . '_' . $section_key;
+			$option_name = $this->setting_option_name . '_' . $section_key;
 			$group       = $option_name . '_group';
 
 			register_setting(
@@ -60,7 +60,7 @@ class Settings extends Base {
 				$section_key,
 				'',
 				'__return_false',
-				'your-plugin-settings-' . $section_key
+				$option_name
 			);
 
 			foreach ( $section['fields'] as $field_key => $field ) {
@@ -68,7 +68,7 @@ class Settings extends Base {
 					$field_key,
 					$field['label'],
 					array( $this, 'render_field' ),
-					'your-plugin-settings-' . $section_key,
+					$option_name,
 					$section_key,
 					array(
 						'section'     => $section_key,
@@ -85,9 +85,9 @@ class Settings extends Base {
 								'image',
 							),
 							true
-						)
-							? false
-							: $field_key,
+						) ?
+							false :
+							$field_key,
 					)
 				);
 			}
@@ -253,7 +253,7 @@ class Settings extends Base {
 	private function get_current_section() {
 		$group = isset( $_POST['option_page'] ) ? sanitize_key( $_POST['option_page'] ) : '';
 
-		$group = str_replace( self::$option_name . '_', '', $group );
+		$group = str_replace( $this->setting_option_name . '_', '', $group );
 
 		return str_replace( '_group', '', $group );
 	}
@@ -266,6 +266,7 @@ class Settings extends Base {
 		$options            = get_option( $option_name, array() );
 		$value              = $options[ $field_key ] ?? $field['default'];
 		$type               = $field['type'] ?? 'text';
+		$required           = ! empty( $field['required'] ) ? 'required' : '';
 		$name               = esc_attr( $option_name ) . '[' . esc_attr( $field_key ) . ']';
 		$id                 = esc_attr( $field_key );
 
@@ -344,7 +345,7 @@ class Settings extends Base {
 				$value = is_array( $value ) ? $value : array();
 
 				printf(
-					'<select id="%s" name="%s[]" multiple="multiple" class="your-plugin-select2" style="width:100%%;max-width:25em;" data-placeholder="%s">',
+					'<select id="%s" name="%s[]" multiple="multiple" class="entire-select2" style="width:100%%;max-width:25em;" data-placeholder="%s">',
 					esc_attr( $id ),
 					esc_attr( $name ),
 					isset( $field['placeholder'] ) ? esc_attr( $field['placeholder'] ) : esc_attr__( 'Select options...', 'entire-user-sync' )
@@ -365,7 +366,7 @@ class Settings extends Base {
 				$value = is_array( $value ) ? $value : array();
 
 				printf(
-					'<select id="%s" name="%s[]" multiple="multiple" class="your-plugin-select2" style="width:100%%;max-width:25em;" data-placeholder="%s">',
+					'<select id="%s" name="%s[]" multiple="multiple" class="entire-select2" style="width:100%%;max-width:25em;" data-placeholder="%s">',
 					esc_attr( $id ),
 					esc_attr( $name ),
 					isset( $field['placeholder'] ) ? esc_attr( $field['placeholder'] ) : esc_attr__( 'Select options...', 'entire-user-sync' )
@@ -453,30 +454,34 @@ class Settings extends Base {
 				$attachment_id = absint( $value );
 				$img_url    = $attachment_id ? wp_get_attachment_image_url( $attachment_id, 'thumbnail' ) : '';
 				?>
-				<div class="your-plugin-image-field" data-field="<?php echo esc_attr( $id ); ?>">
-					<input type="hidden"
-					       id="<?php echo esc_attr( $id ); ?>"
-					       name="<?php echo esc_attr( $name ); ?>"
-					       value="<?php echo esc_attr( $attachment_id ); ?>"/>
+				<div class="entire-image-field" data-field="<?php echo esc_attr( $id ); ?>">
+					<input
+						type="hidden"
+						id="<?php echo esc_attr( $id ); ?>"
+						name="<?php echo esc_attr( $name ); ?>"
+						value="<?php echo esc_attr( $attachment_id ); ?>"
+					/>
 
-					<div class="your-plugin-image-preview">
+					<div class="entire-image-preview">
 						<?php if ( $img_url ) : ?>
-							<img src="<?php echo esc_url( $img_url ); ?>"
-							     style="max-width:150px;display:block;margin-bottom:8px;" alt=""/>
+							<img src="<?php echo esc_url( $img_url ); ?>" alt=""/>
 						<?php endif; ?>
 					</div>
 
-					<button type="button"
-					        class="button your-plugin-upload-image"
-					        data-field="<?php echo esc_attr( $id ); ?>">
+					<button
+						type="button"
+						class="button entire-upload-image"
+						data-field="<?php echo esc_attr( $id ); ?>"
+					>
 						<?php esc_html_e( 'Upload Image', 'entire-user-sync' ); ?>
 					</button>
 
 					<?php if ( $attachment_id ) : ?>
-						<button type="button"
-						        class="button your-plugin-remove-image"
-						        data-field="<?php echo esc_attr( $id ); ?>"
-						        style="margin-left:4px;">
+						<button
+							type="button"
+							class="button entire-remove-image"
+							data-field="<?php echo esc_attr( $id ); ?>"
+						>
 							<?php esc_html_e( 'Remove', 'entire-user-sync' ); ?>
 						</button>
 					<?php endif; ?>
@@ -489,25 +494,34 @@ class Settings extends Base {
 				$name_base  = $option_name . '[' . $field_key . ']';
 				?>
 
-				<div class="your-plugin-repeater" data-name-base="<?php echo esc_attr( $name_base ); ?>">
+				<div class="entire-repeater" data-name-base="<?php echo esc_attr( $name_base ); ?>">
 
-					<div class="your-plugin-repeater-rows">
+					<div class="entire-repeater-rows">
 						<?php foreach ( $rows as $i => $row ) : ?>
-							<div class="your-plugin-repeater-row">
+							<div class="entire-repeater-row">
 								<?php foreach ( $sub_fields as $sub_key => $sub_field ) : ?>
-									<div class="your-plugin-repeater-col">
+									<div class="entire-repeater-col">
 										<label><?php echo esc_html( $sub_field['label'] ); ?></label>
-										<?php $this->render_repeater_input( $sub_field, $name_base . '[' . $i . '][' . $sub_key . ']', isset( $row[ $sub_key ] ) ? $row[ $sub_key ] : '' ); ?>
+										<?php
+										$this->render_repeater_input(
+											$sub_field,
+											$name_base . '[' . $i . '][' . $sub_key . ']',
+											$row[ $sub_key ] ?? ''
+										);
+										?>
 									</div>
 								<?php endforeach; ?>
-								<button type="button" class="button your-plugin-remove-row">&#x2715;</button>
+								<button type="button" class="button entire-remove-row">&#x2715;</button>
 							</div>
 						<?php endforeach; ?>
 					</div>
 
-					<button type="button" class="button your-plugin-add-row"
-					        data-sub-fields="<?php echo esc_attr( wp_json_encode( $sub_fields ) ); ?>">
-						+ <?php echo esc_html( isset( $field['add_label'] ) ? $field['add_label'] : __( 'Add Row', 'entire-user-sync' ) ); ?>
+					<button
+						type="button"
+						class="button entire-add-row"
+						data-sub-fields="<?php echo esc_attr( wp_json_encode( $sub_fields ) ); ?>"
+					>
+						+ <?php echo esc_html( $field['add_label'] ?? __( 'Add Row', 'entire-user-sync' ) ); ?>
 					</button>
 
 				</div>
@@ -516,11 +530,12 @@ class Settings extends Base {
 				break;
 			default:
 				printf(
-					'<input type="%1$s" id="%2$s" name="%3$s" value="%4$s" class="regular-text" />',
+					'<input type="%1$s" id="%2$s" name="%3$s" value="%4$s" class="regular-text" %5$s/>',
 					esc_attr( $type ),
 					esc_attr( $id ),
 					esc_attr( $name ),
-					esc_attr( $value )
+					esc_attr( $value ),
+					esc_attr( $required )
 				);
 				break;
 		}
@@ -617,25 +632,22 @@ class Settings extends Base {
 			$defaults[ $key ] = $field['default'] ?? '';
 		}
 
-		update_option( self::$option_name . '_' . $section, $defaults );
+		update_option( $this->setting_option_name . '_' . $section, $defaults );
 
 		wp_send_json_success( array( 'defaults' => $defaults ) );
 	}
 
 	public function navigation() {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			return;
-		}
 		$active_tab = sanitize_key( $_GET['tab'] ?? array_key_first( $this->sections() ) );
 		?>
-		<nav class="nav-tab-wrapper wp-clearfix">
+		<nav class="nav-tab-wrapper">
 			<?php foreach ( $this->sections() as $key => $section ) : ?>
 				<a
 					href="<?php echo esc_url( $this->get_tab_url( $key ) ); ?>"
-					class="nav-tab<?php echo $active_tab === $key ? ' nav-tab-active' : ''; ?>"
+					class="nav-tab <?php echo $active_tab === $key ? 'nav-tab-active' : ''; ?>"
 				>
 					<?php if ( ! empty( $section['icon'] ) ) : ?>
-						<span class="dashicons <?php echo esc_attr( $section['icon'] ); ?>"></span>
+						<span class="<?php echo esc_attr( $section['icon'] ); ?>"></span>
 					<?php endif; ?>
 
 					<?php echo esc_html( $section['title'] ); ?>
@@ -657,19 +669,6 @@ class Settings extends Base {
 		);
 	}
 
-	public function render_page() {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			return;
-		}
-		$active_tab = sanitize_key( $_GET['tab'] ?? array_key_first( $this->sections() ) );
-		?>
-
-
-		<?php
-	}
-
-	// In Settings.php — add these methods
-
 	/**
 	 * Get a field value with fallback chain:
 	 *   1. DB value  (even if falsy: 0, '', false)
@@ -683,18 +682,13 @@ class Settings extends Base {
 	 */
 	public function get( string $section, string $field, mixed $default = '__UNSET__' ): mixed {
 
-		$option_name = self::$option_name . '_' . $section;
+		$option_name = $this->setting_option_name . '_' . $section;
 		$option      = get_option( $option_name );   // false if never saved
 
 		// Something in DB for this section
 		if ( is_array( $option ) && array_key_exists( $field, $option ) ) {
 			return $option[ $field ];
 		}
-
-		/*
-		echo "<pre>";
-		echo print_r( $option );
-		echo "</pre>";*/
 
 		// Explicit fallback passed
 		if ( $default !== '__UNSET__' ) {
@@ -717,7 +711,7 @@ class Settings extends Base {
 			return false;
 		}
 
-		$option_name      = self::$option_name . '_' . $section;
+		$option_name      = $this->setting_option_name . '_' . $section;
 		$option           = get_option( $option_name, array() );
 		$option           = is_array( $option ) ? $option : array();
 		$option[ $field ] = $value;

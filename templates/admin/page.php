@@ -5,7 +5,6 @@ defined( 'ABSPATH' ) || exit;
 $updated = isset( $_GET['settings-updated'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- No form submission.
 ?>
 <div class="entire-admin-wrap">
-
 	<!-- Header -->
 	<div class="entire-admin-header">
 		<div class="entire-admin-header__inner">
@@ -20,7 +19,7 @@ $updated = isset( $_GET['settings-updated'] ); // phpcs:ignore WordPress.Securit
 				<span class="entire-admin-badge">
 					<?php
 					printf(
-						/* Translators: %s: Plugin version. */
+					/* Translators: %s: Plugin version. */
 						esc_html__( 'V %s', 'entire-user-sync' ),
 						esc_html( $plugin->version() )
 					);
@@ -46,7 +45,7 @@ $updated = isset( $_GET['settings-updated'] ); // phpcs:ignore WordPress.Securit
 		if ( is_readable( $file ) ) {
 			require $file;
 		} else {
-			echo '<div class="notice notice-error">'.esc_html__('Page not found.' , 'entire-user-sync').'</div>';
+			echo '<div class="notice notice-error">' . esc_html__( 'Page not found.', 'entire-user-sync' ) . '</div>';
 		}
 		?>
 	</div><!-- .entire-admin-body -->

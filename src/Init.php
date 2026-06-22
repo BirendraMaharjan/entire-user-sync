@@ -54,26 +54,7 @@ final class Init extends Base {
 	 * @return void
 	 */
 	public function setup(): void {
-		$this->load_textdomain();
 		$this->load_modules();
-	}
-
-	/**
-	 * Load the plugin text domain for translations.
-	 *
-	 * Hooked early enough that all `__()` / `_e()` calls throughout the
-	 * plugin will resolve correctly. The .mo file is expected at:
-	 *   /languages/entire-user-sync-{locale}.mo
-	 *
-	 * @since 1.0.0
-	 * @return void
-	 */
-	public function load_textdomain(): void {
-		load_plugin_textdomain(
-			'entire-user-sync',
-			false,
-			$this->plugin->plugin_path() . '/languages'
-		);
 	}
 
 	/**
@@ -95,6 +76,6 @@ final class Init extends Base {
 			( new Frontend() )->init();
 		}
 
-		new Sync();
+		//new Sync();
 	}
 }

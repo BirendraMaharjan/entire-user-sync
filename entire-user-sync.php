@@ -17,8 +17,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'ENTIRE_USER_SYNC_FILE', __FILE__ );
-define( 'ENTIRE_USER_SYNC_PATH', plugin_dir_path( __FILE__ ) );
+const ENTIRE_USER_SYNC_FILE = __FILE__;
+define( 'ENTIRE_USER_SYNC_PATH', plugin_dir_path( ENTIRE_USER_SYNC_FILE ) );
+const ENTIRE_USER_SYNC_SECURITY_KEY = 'f8Om2Na9ma4Sh7iv6ay3Ne5pa1Ls9JqP';
 
 if ( ! file_exists( ENTIRE_USER_SYNC_PATH . 'vendor/autoload.php' ) ) {
 
@@ -45,7 +46,7 @@ if ( ! file_exists( ENTIRE_USER_SYNC_PATH . 'vendor/autoload.php' ) ) {
 
 require_once ENTIRE_USER_SYNC_PATH . 'vendor/autoload.php';
 
-// ── Activation / Deactivation ─────────────────────────────────────────────────
+// Activation / Deactivation
 register_activation_hook(
 	ENTIRE_USER_SYNC_FILE,
 	array( 'EntireUserSync\Config\Setup', 'activation' )

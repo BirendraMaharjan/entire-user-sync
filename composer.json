@@ -30,7 +30,7 @@
             "@static-analysis",
             "@tests"
         ],
-        "make-pot": "./vendor/bin/wp i18n make-pot . languages/$(basename \"$PWD\").pot --exclude=node_modules,vendor"
+        "make-pot": "./vendor/bin/wp i18n make-pot . languages/$(basename \"$PWD\").pot --exclude=node_modules,vendor,tests,coverage,.git,assets/build"
     },
     "require-dev": {
         "mockery/mockery": "^1.6",

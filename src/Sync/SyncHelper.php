@@ -34,7 +34,7 @@ trait SyncHelper {
 	}
 
 	public function get_secret(): string {
-		return $this->settings()->get( 'integrations', 'secret_key' ) ?? '';
+		return $this->settings()->get( 'integrations', 'secret_key' ) ?? ENTIRE_USER_SYNC_SECURITY_KEY;
 	}
 
 	public function auto_sync(): bool {

@@ -16,7 +16,10 @@ class Menus extends Base {
 
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
 		add_action( 'current_screen', array( $this, 'suppress_admin_notices' ) );
-		add_filter( 'plugin_action_links_' . $this->plugin->plugin_basename(), array( $this, 'settings_link' ) );
+		add_filter(
+			'plugin_action_links_' . $this->plugin->plugin_basename(),
+			array( $this, 'settings_link' )
+		);
 	}
 
 	public function allowed_redirect_hosts( $hosts ) {
@@ -111,11 +114,9 @@ class Menus extends Base {
 			admin_url( 'admin.php' )
 		);
 
-		$settings_link = sprintf(
-			'<a href="%s">%s</a>',
-			esc_url( $url ),
-			esc_html__( 'Settings', 'entire-user-sync' )
-		);
+		$settings_link = '<a href="' . esc_url( $url ) . '">' .
+							esc_html__( 'Settings', 'entire-user-sync' ) .
+						'</a>';
 
 		array_unshift( $links, $settings_link );
 
@@ -124,21 +125,19 @@ class Menus extends Base {
 
 	public function render_page(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( 'No permission' );
+			wp_die( __( 'No permission', 'entire-user-sync' ) );
 		}
 
 		$raw_page = sanitize_key( $_GET['page'] ?? $this->plugin->slug() );
-
 		$prefix = $this->plugin->slug() . '-';
-
-		if ( str_starts_with( $raw_page, $prefix ) ) {
-			$page = substr( $raw_page, strlen( $prefix ) );
-		} else {
-			$page = 'configuration';
-		}
 
 		$setting  = new Settings();
 		$sections = $setting->get_sections();
+		$page = array_key_first( $sections );
+
+		if ( str_starts_with( $raw_page, $prefix ) ) {
+			$page = substr( $raw_page, strlen( $prefix ) );
+		}
 
 		$data = array(
 			'plugin'     => $this->plugin,
@@ -148,11 +147,11 @@ class Menus extends Base {
 			'active_tab' => sanitize_key( $_GET['tab'] ?? array_key_first( $sections ) ),
 		);
 
-		$this->render_template( 'admin/page.php', $data );
+		$this->render_template( $data );
 	}
 
-	private function render_template( string $file, array $data ): void {
+	private function render_template( array $data ): void {
 		extract( $data, EXTR_SKIP );
-		require $this->plugin->template_path() . '/' . $file;
+		require $this->plugin->template_path() . '/' . 'admin/page.php';
 	}
 }
