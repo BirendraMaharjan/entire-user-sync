@@ -22,12 +22,6 @@ class Integrations {
 				'default' => ENTIRE_USER_SYNC_SECURITY_KEY,
 				'required' => true,
 			),
-			'image' => array(
-				'label'   => __( 'Secret Key', 'entire-user-sync' ),
-				'type'    => 'image',
-				'default' => ENTIRE_USER_SYNC_SECURITY_KEY,
-				'required' => true,
-			),
 		);
 	}
 }

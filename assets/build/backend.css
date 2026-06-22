@@ -1,16 +1,19 @@
 /*!*****************************************************************************************************************************************************************************************************************************************************!*\
   !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[4].use[2]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[4].use[3]!./assets/src/scss/backend.scss ***!
   \*****************************************************************************************************************************************************************************************************************************************************/
-@import url(https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap);
-/*!*********************************************************************************************************************************************************************************************************************************************************!*\
-  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[4].use[2]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[4].use[3]!./assets/src/scss/backend.scss (1) ***!
-  \*********************************************************************************************************************************************************************************************************************************************************/
 @charset "UTF-8";
-/* ─────────────────────────────────────────────
-   VIAM Admin Settings — Stylesheet
-   Tone: clean, precise, editorial dark-accented
-   ───────────────────────────────────────────── */
-/* ── Tokens ── */
+/*
+ * entire-user-sync — Admin SCSS
+ * -----------------------------------------------------------------------------
+ * File:    assets/src/scss/backend.scss
+ * Purpose: Styles for plugin admin settings screens (settings pages, repeaters,
+ *          image fields, section layout)
+ * Version: 1.0.0
+ * Since:   1.0.0
+ * Author:  Entire User Sync
+ * License: GPL-2.0-or-later
+ */
+/* --- Tokens --- */
 .entire-admin-wrap {
   --a-bg: #f8f7f5;
   --a-bg-lt: #fff;
@@ -57,15 +60,15 @@
   display: flex;
   gap: 10px;
   padding-top: 15px;
-  border-top: 1px solid #dcdcde;
+  border-top: 1px solid var(--a-border);
 }
 /* Image field */
 .entire-image-field img {
   max-width: 150px;
   display: block;
   margin-bottom: 10px;
-  border: 1px solid #dcdcde;
-  border-radius: 2px;
+  border: 1px solid var(--a-border);
+  border-radius: var(--a-radius);
 }
 .entire-repeater .entire-repeater-rows {
   display: flex;
