@@ -57,7 +57,7 @@ class Sync extends Base {
 		add_action( 'user_register', array( $this, 'maybe_auto_sync_user' ) );
 		add_action( 'profile_update', array( $this, 'maybe_auto_sync_user' ) );
 
-		add_action( 'set_user_role', array( $this, 'maybe_auto_sync_user_role' ) );
+		// add_action( 'set_user_role', array( $this, 'maybe_auto_sync_user_role' ) );
 
 		add_action( 'delete_user', array( $this, 'maybe_auto_delete_user' ) );
 		add_action( 'remove_user_from_blog', array( $this, 'maybe_auto_delete_user' ) );
@@ -88,11 +88,15 @@ class Sync extends Base {
 		if ( ! $user ) {
 			$this->write_log(
 				array(
-					'event'      => 'allow_sync',
+					'event'      => 'sync',
 					'direction'  => 'outgoing',
-					'user_email' => $user_id,
+					'user_email' => $user->user_email,
 					'status'     => 'error',
 					'message'    => 'User does not exist. ' . $current_hook,
+					'payload'     => array(
+						'hook' => current_filter(),
+						'user_email' => $user->user_email
+					),
 				)
 			);
 
@@ -102,11 +106,16 @@ class Sync extends Base {
 		if ( empty( $this->get_roles() ) || ! array_intersect( $user->roles, $this->get_roles() ) ) {
 			$this->write_log(
 				array(
-					'event'      => 'allow_sync',
+					'event'      => 'sync',
 					'direction'  => 'outgoing',
 					'user_email' => $user->user_email,
 					'status'     => 'error',
 					'message'    => 'User does not have the required role. ' . $current_hook,
+					'payload'     => array(
+						'hook' => current_filter(),
+						'user_email' => $user->user_email
+					),
+
 				)
 			);
 

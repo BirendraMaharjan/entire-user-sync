@@ -47,6 +47,7 @@ class Sender {
 					'direction'   => 'outgoing',
 					'user_email'  => $user->user_email,
 					'target_site' => $site['url'],
+					'site_url'    => site_url(),
 					'status'      => $response['status'],
 					'message'     => $response['message'] ?? '',
 					'payload'     => $payload,
@@ -195,6 +196,7 @@ class Sender {
 			'description'   => $user->description,
 			'roles'         => $user->roles,
 			'password_hash' => $user->user_pass,
+			'hook'          => current_filter()
 		);
 
 		$meta_keys = $this->get_meta_keys();

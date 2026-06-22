@@ -156,8 +156,7 @@ class Api {
 			return new \WP_REST_Response( array( 'message' => 'Invalid credentials.' ), 401 );
 		}
 
-		$sync      = new Sync();
-		$meta_keys = $sync->get_meta_keys();
+		$meta_keys = $this->get_meta_keys();
 		$meta      = array();
 
 		foreach ( $meta_keys as $key ) {
@@ -228,7 +227,9 @@ class Api {
 
 		return new \WP_REST_Response(
 			array(
-				'message' => $existing ? 'User updated.' : 'User created.',
+				'message' => $existing ?
+					__('User updated.', 'entire_user_sync') :
+					__( 'User created.', 'entire_user_sync' ),
 				'user_id' => $user_id,
 			),
 			200
@@ -243,7 +244,7 @@ class Api {
 	 * @param \WP_User $existing Existing user, when found.
 	 * @return int|\WP_Error User ID or error.
 	 */
-	private function save_synced_user( array $data, string $email, ?\WP_User $existing ) {
+	private function save_synced_user( array $data, string $email, $existing ) {
 		$user_data = array(
 			'user_email'   => $email,
 			'user_login'   => $this->resolve_user_login( $data, $email ),
