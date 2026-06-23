@@ -113,63 +113,56 @@ class Api {
 		$body        = $request->get_body();
 
 
-		if (  ! $this->is_allowed_site( $source_site ) ) {
-			$this->write_log(
-				array(
-					'event'     => 'auth',
-					'direction' => 'incoming',
-					'status'    => 'error',
-					'message'   => 'Unauthorized site.',
-					'payload'   => array(),
-				)
-			);
-
-			return false;
+		// 1. allowlist.
+		if ( ! $this->is_allowed_site( $source_site ) ) {
+			return $this->fail_auth( $request, 'Unauthorized site: ' . $source_site );
 		}
 
+		// 2. missing headers.
 		if ( ! $secret || ! $signature ) {
-			$this->write_log(
-				array(
-					'event'     => 'auth',
-					'direction' => 'incoming',
-					'status'    => 'error',
-					'message'   => 'Missing secret or signature header.',
-					'payload'   => array(),
-				)
-			);
-
-			return false;
+			return $this->fail_auth( $request, 'Missing auth headers' );
 		}
 
-		if ( abs( time() - $timestamp ) > 300 || ! $timestamp ) {
-			$this->write_log(
-				array(
-					'event'     => 'auth',
-					'direction' => 'incoming',
-					'status'    => 'error',
-					'message'   => 'Request expired.',
-					'payload'   => array(),
-				)
-			);
-
-			return false;
+		// 3. replay protection (5-min window).
+		if ( ! $timestamp || abs( time() - $timestamp ) > 300 ) {
+			return $this->fail_auth( $request, 'Request expired' );
 		}
 
-		$valid = hash_equals( hash_hmac( 'sha256', $body, $secret ), $signature );
+		// 4. signature check.
+		$valid = hash_equals(
+			hash_hmac( 'sha256', $body, $secret ),
+			$signature
+		);
 
 		if ( ! $valid ) {
-			$this->write_log(
-				array(
-					'event'     => 'auth',
-					'direction' => 'incoming',
-					'status'    => 'error',
-					'message'   => 'Invalid signature — possible unauthorized request.',
-					'payload'   => array(),
-				)
-			);
+			return $this->fail_auth( $request, 'Invalid signature' );
 		}
 
-		return $valid;
+		return true;
+	}
+
+	/**
+	 * @param string $key
+	 * @param WP_REST_Request $request
+	 * @param string $message
+	 *
+	 * @return bool
+	 */
+	private function fail_auth( WP_REST_Request $request, string $message ): bool {
+
+		$source_site = $request->get_header( 'X-EntireUS-Site' );
+
+		$this->write_log( [
+			'event'       => 'auth',
+			'direction'   => 'incoming',
+			'status'      => 'error',
+			'message'     => $message,
+			'source_site' => esc_url_raw( $source_site ),
+			'target_site' => esc_url_raw( $this->get_site_url() ),
+			'payload'     => wp_unslash( $request->get_json_params() ),
+		] );
+
+		return false;
 	}
 
 	/**
@@ -436,7 +429,7 @@ class Api {
 				'target_site' => $data['target_site'] ?? '',
 				'status'      => $deleted ? 'success' : 'error',
 				'message'     => $deleted ? 'User deleted from remote request.' : 'Delete failed.',
-				'payload'     => array( 'email' => $email ),
+				'payload'     => $data,
 			)
 		);
 

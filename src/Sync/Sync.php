@@ -62,12 +62,12 @@ class Sync extends Base {
 		add_action( 'delete_user', array( $this, 'maybe_auto_delete_user' ) );
 		add_action( 'remove_user_from_blog', array( $this, 'maybe_auto_delete_user' ) );
 
-		add_action( 'password_reset', array( $this, 'on_password_reset' ), 10, 2 );
-		add_action( 'wp_set_password', array( $this, 'on_set_password' ), 10, 2 );
+		/*add_action( 'password_reset', array( $this, 'on_password_reset' ), 10, 2 );
+		add_action( 'wp_set_password', array( $this, 'on_set_password' ), 10, 2 );*/
 
 		add_filter( 'authenticate', array( $this, 'maybe_import_remote_user' ), 20, 3 );
 
-		add_action( 'wp_login', array( $this, 'on_local_login' ), 10, 2 );
+		// add_action( 'wp_login', array( $this, 'on_local_login' ), 10, 2 );
 	}
 
 	/**
@@ -83,7 +83,6 @@ class Sync extends Base {
 		}
 
 		$user         = get_userdata( $user_id );
-		$current_hook = current_filter();
 
 		if ( ! $user ) {
 			$this->write_log(
@@ -92,7 +91,7 @@ class Sync extends Base {
 					'direction'  => 'outgoing',
 					'user_email' => $user->user_email,
 					'status'     => 'error',
-					'message'    => 'User does not exist. ' . $current_hook,
+					'message'    => 'User does not exist.',
 					'payload'     => array(
 						'hook' => current_filter(),
 						'user_email' => $user->user_email
@@ -110,7 +109,7 @@ class Sync extends Base {
 					'direction'  => 'outgoing',
 					'user_email' => $user->user_email,
 					'status'     => 'error',
-					'message'    => 'User does not have the required role. ' . $current_hook,
+					'message'    => 'User does not have the required role.',
 					'payload'     => array(
 						'hook' => current_filter(),
 						'user_email' => $user->user_email
@@ -232,21 +231,14 @@ class Sync extends Base {
 			return $user;
 		}
 
-		$sites     = $this->get_sites();
-		$meta_keys = $this->get_meta_keys();
-
-		if ( empty( $sites ) ) {
-			return $user;
-		}
-
-		foreach ( $sites as $site ) {
+		foreach ( $this->get_active_sites() as $site ) {
 			$remote_user = $this->fetch_remote_user( $username, $password, $site );
 
 			if ( is_wp_error( $remote_user ) || empty( $remote_user ) ) {
 				continue;
 			}
 
-			$local_user = $this->create_local_user( $remote_user, $meta_keys );
+			$local_user = $this->create_local_user( $remote_user );
 
 			if ( is_wp_error( $local_user ) ) {
 				$this->write_log(
@@ -306,15 +298,17 @@ class Sync extends Base {
 		$response = wp_remote_post(
 			$endpoint,
 			array(
-				'timeout' => 10,
+				'timeout' => 15,
 				'headers' => array(
 					'Content-Type'         => 'application/json',
 					'X-EntireUS-Signature' => $signature,
+					'X-EntireUS-Timestamp' => time(),
+					'X-EntireUS-Site'      => $this->get_site_url(),
 				),
 				'body'    => $body,
 			)
 		);
-
+		
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
@@ -332,11 +326,11 @@ class Sync extends Base {
 	/**
 	 * Create or update a local user from remote payload.
 	 *
-	 * @param array $remote    Remote user payload.
-	 * @param array $meta_keys Allowed meta keys to sync.
+	 * @param array $remote Remote user payload.
+	 *
 	 * @return \WP_User|\WP_Error Local WP_User instance or WP_Error on failure.
 	 */
-	private function create_local_user( array $remote, array $meta_keys ): \WP_User|\WP_Error {
+	private function create_local_user( array $remote ): \WP_User|\WP_Error {
 		$email = sanitize_email( $remote['user_email'] ?? '' );
 		if ( ! $email ) {
 			return new \WP_Error( 'entireus_bad_email', 'Remote user has no email' );
@@ -358,7 +352,6 @@ class Sync extends Base {
 		);
 
 		if ( ! empty( $remote['password_hash'] ) ) {
-
 			$user_data['user_pass'] = $remote['password_hash'];
 		} else {
 			$user_data['user_pass'] = wp_generate_password( 24 );
@@ -391,6 +384,7 @@ class Sync extends Base {
 			$this->apply_roles( $wp_user, $remote['roles'], $this->get_roles() );
 		}
 
+		$meta_keys       = $this->get_meta_keys();
 		if ( ! empty( $remote['meta'] ) && is_array( $remote['meta'] ) ) {
 			$this->apply_meta( $user_id, $remote['meta'], $meta_keys );
 		}

@@ -201,7 +201,6 @@ class Sender {
 			'user_url'      => $user->user_url,
 			'description'   => $user->description,
 			'roles'         => $user->roles,
-			'password_hash' => $user->user_pass,
 			'source_site'   => $this->get_site_url(),
 			'target_site'   => $site['url'] ?? '',
 			'hook'          => current_filter()
@@ -275,7 +274,7 @@ class Sender {
 	 *
 	 * @return string Full URL endpoint.
 	 */
-	private function endpoint( array $site, string $route ): string {
+	public function endpoint( array $site, string $route ): string {
 		return trailingslashit( $site['url'] ?? '' ) . 'wp-json/entireus/v1/' . $route;
 	}
 
@@ -286,7 +285,7 @@ class Sender {
 	 *
 	 * @return string Key.
 	 */
-	private function site_key( array $site ): string {
+	public function site_key( array $site ): string {
 		if ( ! empty( $site['label'] ) ) {
 			return (string) $site['label'];
 		}
