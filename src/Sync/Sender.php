@@ -12,11 +12,7 @@ namespace EntireUserSync\Sync;
 use WP_User;
 
 /**
- * Sender.
- *
- * Sends local user changes to configured remote sites.
- *
- * @package EntireUserSync\Sync
+ * Class Sender
  */
 class Sender {
 
@@ -32,13 +28,16 @@ class Sender {
 	public function sync_user( int $user_id ): array {
 		$user = get_userdata( $user_id );
 
-		$payload = $this->build_payload( $user );
-
 		$results = array();
 
 		foreach ( $this->get_active_sites() as $site ) {
 
-			$response                            = $this->send_request( $this->endpoint( $site, 'sync-user' ), $payload );
+			$payload  = $this->build_payload( $user, $site );
+			$response = $this->send_request(
+				$this->endpoint( $site, 'sync-user' ),
+				$payload
+			);
+
 			$results[ $this->site_key( $site ) ] = $response;
 
 			$this->write_log(
@@ -47,7 +46,7 @@ class Sender {
 					'direction'   => 'outgoing',
 					'user_email'  => $user->user_email,
 					'target_site' => $site['url'],
-					'source_site' => get_site_url(),
+					'source_site' => $this->get_site_url(),
 					'status'      => $response['status'],
 					'message'     => $response['message'] ?? '',
 					'payload'     => $payload,
@@ -84,13 +83,13 @@ class Sender {
 				continue;
 			}
 
-			$payload = $this->build_payload( $user, $roles, $meta_keys );
-
 			foreach ( $sites as $site ) {
-				$response                              = $this->send_request(
+				$payload  = $this->build_payload( $user, $site );
+				$response = $this->send_request(
 					$this->endpoint( $site, 'sync-user' ),
 					$payload
 				);
+
 				$results[ $this->site_key( $site ) ][] = array(
 					'user'   => $user->user_login,
 					'status' => $response['status'],
@@ -114,11 +113,16 @@ class Sender {
 
 		foreach ( $this->get_active_sites() as $site ) {
 
-			$response                            = $this->send_request(
+			$response = $this->send_request(
 				$this->endpoint( $site, 'delete-user' ),
-				array( 'email' => $email ),
+				array(
+					'email'       => $email,
+					'target_site' => $site['url'],
+					'source_site' => $this->get_site_url()
+				),
 				'DELETE'
 			);
+
 			$results[ $this->site_key( $site ) ] = $response;
 
 			$this->write_log(
@@ -127,7 +131,7 @@ class Sender {
 					'direction'   => 'outgoing',
 					'user_email'  => $email,
 					'target_site' => $site['url'],
-					'source_site' => get_site_url(),
+					'source_site' => $this->get_site_url(),
 					'status'      => $response['status'],
 					'message'     => $response['message'] ?? '',
 					'payload'     => array( 'email' => $email ),
@@ -143,7 +147,7 @@ class Sender {
 	 *
 	 * @param string $email User email.
 	 * @param string $password_hash Stored password hash.
-	 * @param array  $sites Sites to contact.
+	 * @param array $sites Sites to contact.
 	 *
 	 * @return array Results per site.
 	 */
@@ -183,10 +187,11 @@ class Sender {
 	 * Build the outgoing payload for a user.
 	 *
 	 * @param WP_User $user User object.
+	 * @param array $site Site config.
 	 *
 	 * @return array Payload array.
 	 */
-	private function build_payload( WP_User $user ): array {
+	private function build_payload( WP_User $user, array $site ): array {
 		$payload = array(
 			'user_login'    => $user->user_login,
 			'user_email'    => $user->user_email,
@@ -197,15 +202,17 @@ class Sender {
 			'description'   => $user->description,
 			'roles'         => $user->roles,
 			'password_hash' => $user->user_pass,
+			'source_site'   => $this->get_site_url(),
+			'target_site'   => $site['url'] ?? '',
 			'hook'          => current_filter()
 		);
 
-		$meta_keys = $this->get_meta_keys();
 
 		if ( ! empty( $this->get_roles() ) ) {
 			$payload['roles'] = array_values( array_intersect( $user->roles, $this->get_roles() ) );
 		}
 
+		$meta_keys       = $this->get_meta_keys();
 		$payload['meta'] = array();
 		foreach ( $meta_keys as $key ) {
 			$payload['meta'][ $key ] = get_user_meta( $user->ID, $key, true );
@@ -218,7 +225,7 @@ class Sender {
 	 * Send a signed HTTP request to an endpoint.
 	 *
 	 * @param string $endpoint URL to call.
-	 * @param array  $data Data to send.
+	 * @param array $data Data to send.
 	 * @param string $method HTTP method.
 	 *
 	 * @return array Response summary.
@@ -235,7 +242,8 @@ class Sender {
 				'headers' => array(
 					'Content-Type'         => 'application/json',
 					'X-EntireUS-Signature' => $signature,
-					'X-EntireUS-Site'      => get_site_url(),
+					'X-EntireUS-Timestamp' => time(),
+					'X-EntireUS-Site'      => $this->get_site_url(),
 				),
 				'body'    => $body,
 			)
@@ -262,7 +270,7 @@ class Sender {
 	/**
 	 * Build a full REST endpoint for a site.
 	 *
-	 * @param array  $site Site config.
+	 * @param array $site Site config.
 	 * @param string $route Route name.
 	 *
 	 * @return string Full URL endpoint.

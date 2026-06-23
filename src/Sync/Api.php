@@ -9,6 +9,11 @@
 
 namespace EntireUserSync\Sync;
 
+use WP_Error;
+use WP_REST_Request;
+use WP_REST_Response;
+use WP_User;
+
 /**
  * Class Api
  */
@@ -39,7 +44,7 @@ class Api {
 		);
 
 		register_rest_route(
-			'entireus/v1',
+			$this->get_route_namespace(),
 			'/get-user',
 			array_merge(
 				$args,
@@ -51,7 +56,7 @@ class Api {
 		);
 
 		register_rest_route(
-			'entireus/v1',
+			$this->get_route_namespace(),
 			'/sync-user',
 			array_merge(
 				$args,
@@ -63,7 +68,7 @@ class Api {
 		);
 
 		register_rest_route(
-			'entireus/v1',
+			$this->get_route_namespace(),
 			'/sync-password',
 			array_merge(
 				$args,
@@ -75,7 +80,7 @@ class Api {
 		);
 
 		register_rest_route(
-			'entireus/v1',
+			$this->get_route_namespace(),
 			'/delete-user',
 			array_merge(
 				$args,
@@ -90,19 +95,37 @@ class Api {
 	/**
 	 * Verify incoming request signature and mark request as incoming sync.
 	 *
-	 * @param \WP_REST_Request $request REST request instance.
+	 * @param WP_REST_Request $request REST request instance.
+	 *
 	 * @return bool True if signature is valid.
 	 */
-	public function verify_signature( \WP_REST_Request $request ): bool {
+	public function verify_signature( WP_REST_Request $request ): bool {
 
 		// Mark this as an incoming EntireUS sync request.
 		if ( ! defined( 'ENTIREUS_INCOMING_SYNC' ) ) {
 			define( 'ENTIREUS_INCOMING_SYNC', true );
 		}
 
-		$secret    = $this->get_secret();
-		$signature = $request->get_header( 'X-EntireUS-Signature' );
-		$body      = $request->get_body();
+		$secret      = $this->get_secret();
+		$signature   = $request->get_header( 'X-EntireUS-Signature' );
+		$source_site = $request->get_header( 'X-EntireUS-Site' );
+		$timestamp   = absint( $request->get_header( 'X-EntireUS-Timestamp' ) );
+		$body        = $request->get_body();
+
+
+		if (  ! $this->is_allowed_site( $source_site ) ) {
+			$this->write_log(
+				array(
+					'event'     => 'auth',
+					'direction' => 'incoming',
+					'status'    => 'error',
+					'message'   => 'Unauthorized site.',
+					'payload'   => array(),
+				)
+			);
+
+			return false;
+		}
 
 		if ( ! $secret || ! $signature ) {
 			$this->write_log(
@@ -114,6 +137,21 @@ class Api {
 					'payload'   => array(),
 				)
 			);
+
+			return false;
+		}
+
+		if ( abs( time() - $timestamp ) > 300 || ! $timestamp ) {
+			$this->write_log(
+				array(
+					'event'     => 'auth',
+					'direction' => 'incoming',
+					'status'    => 'error',
+					'message'   => 'Request expired.',
+					'payload'   => array(),
+				)
+			);
+
 			return false;
 		}
 
@@ -137,23 +175,24 @@ class Api {
 	/**
 	 * Handle get-user endpoint. Authenticate then return limited user info.
 	 *
-	 * @param \WP_REST_Request $request REST request.
-	 * @return \WP_REST_Response Response object.
+	 * @param WP_REST_Request $request REST request.
+	 *
+	 * @return WP_REST_Response Response object.
 	 */
-	public function handle_get_user( \WP_REST_Request $request ): \WP_REST_Response {
+	public function handle_get_user( WP_REST_Request $request ): WP_REST_Response {
 		$params   = $request->get_json_params();
 		$username = sanitize_text_field( $params['username'] ?? '' );
 		$password = $params['password'] ?? '';
 
 		if ( ! $username || ! $password ) {
-			return new \WP_REST_Response( array( 'message' => 'Missing credentials.' ), 400 );
+			return new WP_REST_Response( array( 'message' => 'Missing credentials.' ), 400 );
 		}
 
 		$user = wp_authenticate( $username, $password );
 
 		if ( is_wp_error( $user ) ) {
 
-			return new \WP_REST_Response( array( 'message' => 'Invalid credentials.' ), 401 );
+			return new WP_REST_Response( array( 'message' => 'Invalid credentials.' ), 401 );
 		}
 
 		$meta_keys = $this->get_meta_keys();
@@ -163,7 +202,7 @@ class Api {
 			$meta[ $key ] = get_user_meta( $user->ID, $key, true );
 		}
 
-		return new \WP_REST_Response(
+		return new WP_REST_Response(
 			array(
 				'user' => array(
 					'user_login'    => $user->user_login,
@@ -186,14 +225,15 @@ class Api {
 	/**
 	 * Handle syncing (create/update) a user from remote.
 	 *
-	 * @param \WP_REST_Request $request REST request.
-	 * @return \WP_REST_Response
+	 * @param WP_REST_Request $request REST request.
+	 *
+	 * @return WP_REST_Response
 	 */
-	public function handle_sync_user( \WP_REST_Request $request ): \WP_REST_Response {
+	public function handle_sync_user( WP_REST_Request $request ): WP_REST_Response {
 		$data = $request->get_json_params();
 
 		if ( empty( $data['user_email'] ) ) {
-			return new \WP_REST_Response( array( 'message' => 'Missing user_email.' ), 400 );
+			return new WP_REST_Response( array( 'message' => 'Missing user_email.' ), 400 );
 		}
 
 		$email    = sanitize_email( $data['user_email'] );
@@ -201,7 +241,7 @@ class Api {
 		$user_id  = $this->save_synced_user( $data, $email, $existing );
 
 		if ( is_wp_error( $user_id ) ) {
-			return new \WP_REST_Response( array( 'message' => $user_id->get_error_message() ), 500 );
+			return new WP_REST_Response( array( 'message' => $user_id->get_error_message() ), 500 );
 		}
 
 		$this->sync_synced_user_roles( $user_id, $data['roles'] ?? array() );
@@ -226,10 +266,10 @@ class Api {
 			)
 		);
 
-		return new \WP_REST_Response(
+		return new WP_REST_Response(
 			array(
-				'message' => $existing ?
-					__('User updated.', 'entire_user_sync') : __( 'User created.', 'entire_user_sync' ),
+				'message' => $existing ? 'User updated.' : 'User created.',
+				'code'    => $existing ? 'user_updated' : 'user_created',
 				'user_id' => $user_id,
 			),
 			200
@@ -239,12 +279,13 @@ class Api {
 	/**
 	 * Save a synced user by creating or updating the local account.
 	 *
-	 * @param array    $data     Raw request payload.
-	 * @param string   $email    Sanitized email.
-	 * @param \WP_User $existing Existing user, when found.
-	 * @return int|\WP_Error User ID or error.
+	 * @param array $data Raw request payload.
+	 * @param string $email Sanitized email.
+	 * @param WP_User|null $existing Existing user, when found.
+	 *
+	 * @return int|WP_Error User ID or error.
 	 */
-	private function save_synced_user( array $data, string $email, $existing ) {
+	private function save_synced_user( array $data, string $email, ?WP_User $existing ) {
 		$user_data = array(
 			'user_email'   => $email,
 			'user_login'   => $this->resolve_user_login( $data, $email ),
@@ -258,6 +299,7 @@ class Api {
 
 		if ( $existing ) {
 			$user_data['ID'] = $existing->ID;
+
 			return wp_update_user( $user_data );
 		}
 
@@ -267,8 +309,9 @@ class Api {
 	/**
 	 * Resolve a usable login name from the payload.
 	 *
-	 * @param array  $data Request payload.
+	 * @param array $data Request payload.
 	 * @param string $email Sanitized email.
+	 *
 	 * @return string
 	 */
 	private function resolve_user_login( array $data, string $email ): string {
@@ -283,7 +326,7 @@ class Api {
 	/**
 	 * Sync remote roles to the local account.
 	 *
-	 * @param int   $user_id User ID.
+	 * @param int $user_id User ID.
 	 * @param array $roles Requested roles.
 	 */
 	private function sync_synced_user_roles( int $user_id, array $roles ): void {
@@ -291,7 +334,7 @@ class Api {
 			return;
 		}
 
-		$wp_user = new \WP_User( $user_id );
+		$wp_user = new WP_User( $user_id );
 		$wp_user->set_role( '' );
 
 		foreach ( $roles as $role ) {
@@ -305,8 +348,8 @@ class Api {
 	/**
 	 * Sync remote meta values to the local account.
 	 *
-	 * @param int   $user_id User ID.
-	 * @param array $meta    Meta values.
+	 * @param int $user_id User ID.
+	 * @param array $meta Meta values.
 	 */
 	private function sync_synced_user_meta( int $user_id, array $meta ): void {
 		foreach ( $meta as $key => $value ) {
@@ -317,22 +360,23 @@ class Api {
 	/**
 	 * Handle syncing a password hash from remote.
 	 *
-	 * @param \WP_REST_Request $request REST request.
-	 * @return \WP_REST_Response
+	 * @param WP_REST_Request $request REST request.
+	 *
+	 * @return WP_REST_Response
 	 */
-	public function handle_sync_password( \WP_REST_Request $request ): \WP_REST_Response {
+	public function handle_sync_password( WP_REST_Request $request ): WP_REST_Response {
 		$data  = $request->get_json_params();
 		$email = sanitize_email( $data['user_email'] ?? '' );
 		$hash  = $data['password_hash'] ?? '';
 
 		if ( ! $email || ! $hash ) {
-			return new \WP_REST_Response( array( 'message' => 'Missing email or password_hash.' ), 400 );
+			return new WP_REST_Response( array( 'message' => 'Missing email or password_hash.' ), 400 );
 		}
 
 		$user = get_user_by( 'email', $email );
 		if ( ! $user ) {
 
-			return new \WP_REST_Response( array( 'message' => 'User not found.' ), 404 );
+			return new WP_REST_Response( array( 'message' => 'User not found.' ), 404 );
 		}
 
 		$this->write_password_hash( $user->ID, $hash );
@@ -351,26 +395,33 @@ class Api {
 			)
 		);
 
-		return new \WP_REST_Response( array( 'message' => 'Password synced.' ), 200 );
+		return new WP_REST_Response(
+			array(
+				'message' => 'Password synced.',
+				'code'    => 'password_synced',
+			),
+			200
+		);
 	}
 
 	/**
 	 * Handle deleting a local user from a remote request.
 	 *
-	 * @param \WP_REST_Request $request REST request.
-	 * @return \WP_REST_Response
+	 * @param WP_REST_Request $request REST request.
+	 *
+	 * @return WP_REST_Response
 	 */
-	public function handle_delete_user( \WP_REST_Request $request ): \WP_REST_Response {
+	public function handle_delete_user( WP_REST_Request $request ): WP_REST_Response {
 		$data  = $request->get_json_params();
 		$email = sanitize_email( $data['email'] ?? '' );
 
 		if ( ! $email ) {
-			return new \WP_REST_Response( array( 'message' => 'Missing email.' ), 400 );
+			return new WP_REST_Response( array( 'message' => 'Missing email.' ), 400 );
 		}
 
 		$user = get_user_by( 'email', $email );
 		if ( ! $user ) {
-			return new \WP_REST_Response( array( 'message' => 'User not found.' ), 404 );
+			return new WP_REST_Response( array( 'message' => 'User not found.' ), 404 );
 		}
 
 		require_once ABSPATH . 'wp-admin/includes/user.php';
@@ -378,20 +429,21 @@ class Api {
 
 		$this->write_log(
 			array(
-				'event'      => 'delete',
-				'direction'  => 'incoming',
-				'user_email' => $email,
+				'event'       => 'delete',
+				'direction'   => 'incoming',
+				'user_email'  => $email,
 				'source_site' => $data['source_site'] ?? '',
 				'target_site' => $data['target_site'] ?? '',
-				'status'     => $deleted ? 'success' : 'error',
-				'message'    => $deleted ? 'User deleted from remote request.' : 'Delete failed.',
-				'payload'    => array( 'email' => $email ),
+				'status'      => $deleted ? 'success' : 'error',
+				'message'     => $deleted ? 'User deleted from remote request.' : 'Delete failed.',
+				'payload'     => array( 'email' => $email ),
 			)
 		);
 
-		return new \WP_REST_Response(
+		return new WP_REST_Response(
 			array(
 				'message' => $deleted ? 'User deleted.' : 'Delete failed.',
+				'code'    => $deleted ? 'user_deleted' : 'delete_failed',
 			),
 			$deleted ? 200 : 500
 		);
@@ -400,8 +452,8 @@ class Api {
 	/**
 	 * Low-level DB update for user password.
 	 *
-	 * @param int    $user_id User ID.
-	 * @param string $hash    Stored password hash.
+	 * @param int $user_id User ID.
+	 * @param string $hash Stored password hash.
 	 */
 	private function write_password_hash( int $user_id, string $hash ): void {
 		global $wpdb;

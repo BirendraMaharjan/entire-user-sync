@@ -111,6 +111,26 @@ trait SyncHelper {
 		);
 	}
 
+	public function is_allowed_site( string $site_url ): bool {
+		$active_sites = $this->get_active_sites();
+
+		return in_array( $site_url, array_column( $active_sites, 'url' ), true );
+	}
+
+	/**
+	 * Return the current site url.
+	 */
+	public function get_site_url(): string {
+		return get_site_url();
+	}
+
+	/**
+	 * Return the route namespace.
+	 */
+	public function get_route_namespace(): string {
+		return 'entireus/v1';
+	}
+
 	/**
 	 * Return configured roles allowed for syncing.
 	 */
