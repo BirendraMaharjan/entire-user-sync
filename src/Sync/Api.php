@@ -240,9 +240,6 @@ class Api {
 		$this->sync_synced_user_roles( $user_id, $data['roles'] ?? array() );
 		$this->sync_synced_user_meta( $user_id, $data['meta'] ?? array() );
 
-		if ( ! empty( $data['password_hash'] ) ) {
-			$this->write_password_hash( $user_id, $data['password_hash'] );
-		}
 
 		$event = $existing ? 'update' : 'create';
 
@@ -287,7 +284,6 @@ class Api {
 			'display_name' => sanitize_text_field( $data['display_name'] ?? '' ),
 			'user_url'     => esc_url_raw( $data['user_url'] ?? '' ),
 			'description'  => sanitize_textarea_field( $data['description'] ?? '' ),
-			'user_pass'    => ! empty( $data['password_hash'] ) ? $data['password_hash'] : wp_generate_password( 20 ),
 		);
 
 		if ( $existing ) {
@@ -440,26 +436,5 @@ class Api {
 			),
 			$deleted ? 200 : 500
 		);
-	}
-
-	/**
-	 * Low-level DB update for user password.
-	 *
-	 * @param int $user_id User ID.
-	 * @param string $hash Stored password hash.
-	 */
-	private function write_password_hash( int $user_id, string $hash ): void {
-		global $wpdb;
-		$wpdb->update(
-			$wpdb->users,
-			array(
-				'user_pass'           => $hash,
-				'user_activation_key' => '',
-			),
-			array( 'ID' => $user_id )
-		);
-
-		wp_cache_delete( $user_id, 'users' );
-		clean_user_cache( $user_id );
 	}
 }

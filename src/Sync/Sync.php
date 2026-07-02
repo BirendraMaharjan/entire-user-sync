@@ -11,6 +11,8 @@ namespace EntireUserSync\Sync;
 
 use EntireUserSync\Common\Abstracts\Base;
 use EntireUserSync\Common\Traits\Requester;
+use WP_Error;
+use WP_User;
 
 /**
  * Class Sync
@@ -23,28 +25,10 @@ class Sync extends Base {
 	use Requester;
 
 	/**
-	 * Sync sender helper.
-	 *
-	 * @var Sender
-	 */
-	public Sender $sender;
-
-	/**
-	 * REST API helper.
-	 *
-	 * @var Api
-	 */
-	public Api $api;
-
-	/**
 	 * Sync constructor.
 	 */
 	public function __construct() {
 		parent::__construct();
-
-		// Initialize helpers.
-		$this->sender = new Sender();
-		$this->api    = new Api();
 
 		$this->init();
 	}
@@ -71,6 +55,33 @@ class Sync extends Base {
 	}
 
 	/**
+	 * Build a full REST endpoint for a site.
+	 *
+	 * @param array $site Site config.
+	 * @param string $route Route name.
+	 *
+	 * @return string Full URL endpoint.
+	 */
+	public function endpoint( array $site, string $route ): string {
+		return trailingslashit( $site['url'] ?? '' ) . 'wp-json/entireus/v1/' . $route;
+	}
+
+	/**
+	 * Return a human-friendly site key for result indexing.
+	 *
+	 * @param array $site Site config.
+	 *
+	 * @return string Key.
+	 */
+	public function site_key( array $site ): string {
+		if ( ! empty( $site['label'] ) ) {
+			return (string) $site['label'];
+		}
+
+		return (string) ( $site['url'] ?? '' );
+	}
+
+	/**
 	 * Decide whether the user should be synced outbound.
 	 *
 	 * @param int $user_id User ID.
@@ -83,7 +94,6 @@ class Sync extends Base {
 		}
 
 		$user         = get_userdata( $user_id );
-
 		if ( ! $user ) {
 			$this->write_log(
 				array(
@@ -125,6 +135,53 @@ class Sync extends Base {
 	}
 
 	/**
+	 * Send a signed HTTP request to an endpoint.
+	 *
+	 * @param string $endpoint URL to call.
+	 * @param array $data Data to send.
+	 * @param string $method HTTP method.
+	 *
+	 * @return array Response summary.
+	 */
+	public function send_request( string $endpoint, array $data, string $method = 'POST' ): array {
+		$body      = wp_json_encode( $data );
+		$signature = hash_hmac( 'sha256', $body, $this->get_secret() );
+
+		$response = wp_remote_request(
+			$endpoint,
+			array(
+				'method'  => $method,
+				'timeout' => 15,
+				'headers' => array(
+					'Content-Type'         => 'application/json',
+					'X-EntireUS-Signature' => $signature,
+					'X-EntireUS-Timestamp' => time(),
+					'X-EntireUS-Site'      => $this->get_site_url(),
+				),
+				'body'    => $body,
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return array(
+				'status'  => 'error',
+				'message' => $response->get_error_message(),
+			);
+		}
+
+		$code          = wp_remote_retrieve_response_code( $response );
+		$response_body = wp_remote_retrieve_body( $response );
+		$decoded_body  = json_decode( $response_body, true );
+
+		return array(
+			'status'  => ( $code >= 200 && $code < 300 ) ? 'success' : 'error',
+			'code'    => $code,
+			'data'    => $decoded_body,
+			'message' => $decoded_body['message'] ?? '',
+		);
+	}
+
+	/**
 	 * Triggered when a user is registered/updated; conditionally send the user.
 	 *
 	 * @param int $user_id User ID.
@@ -135,16 +192,78 @@ class Sync extends Base {
 			return;
 		}
 
-		$this->sender->sync_user( $user_id );
+		$this->sync_user( $user_id );
 	}
 
 	/**
-	 * Proxy for role changes to sync.
+	 * Sync a single user to configured remote sites.
 	 *
 	 * @param int $user_id User ID.
+	 *
+	 * @return array Results per site.
 	 */
-	public function maybe_auto_sync_user_role( int $user_id ): void {
-		$this->maybe_auto_sync_user( $user_id );
+	public function sync_user( int $user_id ): array {
+		$user = get_userdata( $user_id );
+
+		$results = array();
+
+		foreach ( $this->get_active_sites() as $site ) {
+
+			$payload  = $this->build_payload( $user, $site );
+			$response = $this->send_request(
+				$this->endpoint( $site, 'sync-user' ),
+				$payload
+			);
+
+			$results[ $this->site_key( $site ) ] = $response;
+
+			$this->write_log(
+				array(
+					'event'       => 'update',
+					'direction'   => 'outgoing',
+					'user_email'  => $user->user_email,
+					'target_site' => $site['url'],
+					'source_site' => $this->get_site_url(),
+					'status'      => $response['status'],
+					'message'     => $response['message'] ?? '',
+					'payload'     => $payload,
+				)
+			);
+		}
+
+		return $results;
+	}
+
+	/**
+	 * Build the outgoing payload for a user.
+	 *
+	 * @param WP_User $user User object.
+	 * @param array $site Site config.
+	 *
+	 * @return array Payload array.
+	 */
+	private function build_payload( WP_User $user, array $site ): array {
+		$payload = array(
+			'user_login'    => $user->user_login,
+			'user_email'    => $user->user_email,
+			'first_name'    => $user->first_name,
+			'last_name'     => $user->last_name,
+			'display_name'  => $user->display_name,
+			'user_url'      => $user->user_url,
+			'description'   => $user->description,
+			'roles'         => $user->roles,
+			'source_site'   => $this->get_site_url(),
+			'target_site'   => $site['url'],
+			'hook'          => current_filter()
+		);
+
+		$meta_keys       = $this->get_meta_keys();
+		$payload['meta'] = array();
+		foreach ( $meta_keys as $key ) {
+			$payload['meta'][ $key ] = get_user_meta( $user->ID, $key, true );
+		}
+
+		return $payload;
 	}
 
 	/**
@@ -160,58 +279,48 @@ class Sync extends Base {
 		if ( ! $user ) {
 			return;
 		}
-		$this->sender->delete_user( $user->user_email, $this->get_sites() );
+		$this->delete_user( $user->user_email );
 	}
 
 	/**
-	 * Handle password reset event.
+	 * Request remote sites to delete a user.
 	 *
-	 * @param \WP_User $user User object.
-	 * @param string   $new_pass New password.
+	 * @param string $email User email.
+	 *
+	 * @return array Results per site.
 	 */
-	public function on_password_reset( \WP_User $user, string $new_pass ): void {
-		$this->push_password_hash( $user );
-	}
+	public function delete_user( string $email ): array {
+		$results = array();
 
-	/**
-	 * Handle low-level set password action.
-	 *
-	 * @param string $password New password.
-	 * @param int    $user_id  User ID.
-	 */
-	public function on_set_password( string $password, int $user_id ): void {
-		if ( ! $this->allow_sync( $user_id ) ) {
-			return;
+		foreach ( $this->get_active_sites() as $site ) {
+
+			$response = $this->send_request(
+				$this->endpoint( $site, 'delete-user' ),
+				array(
+					'email'       => $email,
+					'target_site' => $site['url'],
+					'source_site' => $this->get_site_url()
+				),
+				'DELETE'
+			);
+
+			$results[ $this->site_key( $site ) ] = $response;
+
+			$this->write_log(
+				array(
+					'event'       => 'delete',
+					'direction'   => 'outgoing',
+					'user_email'  => $email,
+					'source_site' => $this->get_site_url(),
+					'target_site' => $site['url'],
+					'status'      => $response['status'],
+					'message'     => $response['message'] ?? '',
+					'payload'     => array( 'email' => $email ),
+				)
+			);
 		}
 
-		$user = get_userdata( $user_id );
-		if ( $user ) {
-			$this->push_password_hash( $user );
-		}
-	}
-
-	/**
-	 * On local login, push password hash to remotes.
-	 *
-	 * @param string   $user_login Username.
-	 * @param \WP_User $user User object.
-	 */
-	public function on_local_login( string $user_login, \WP_User $user ): void {
-		$this->push_password_hash( $user );
-	}
-
-	/**
-	 * Push password hash to remote sites for the user.
-	 *
-	 * @param \WP_User $user User instance.
-	 */
-	private function push_password_hash( \WP_User $user ): void {
-		$sites = $this->get_sites();
-		if ( empty( $sites ) ) {
-			return;
-		}
-
-		$this->sender->sync_password( $user->user_email, $user->user_pass, $sites );
+		return $results;
 	}
 
 	/**
@@ -223,7 +332,7 @@ class Sync extends Base {
 	 * @return mixed WP_User or original $user on failure.
 	 */
 	public function maybe_import_remote_user( $user, string $username, string $password ) {
-		if ( $user instanceof \WP_User ) {
+		if ( $user instanceof WP_User ) {
 			return $user;
 		}
 
@@ -232,11 +341,23 @@ class Sync extends Base {
 		}
 
 		foreach ( $this->get_active_sites() as $site ) {
-			$remote_user = $this->fetch_remote_user( $username, $password, $site );
 
-			if ( is_wp_error( $remote_user ) || empty( $remote_user ) ) {
+			$response = $this->send_request(
+				$this->endpoint( $site, 'get-user' ),
+				array(
+					'username'       => $username,
+					'password'       => $password,
+					'target_site' => $site['url'],
+					'source_site' => $this->get_site_url()
+				)
+			);
+
+			if ( is_wp_error( $response ) || empty( $response ) ) {
 				continue;
 			}
+
+			$remote_user = $response['data']['user'] ?? null;
+			$remote_user['password'] = $password;
 
 			$local_user = $this->create_local_user( $remote_user );
 
@@ -246,10 +367,11 @@ class Sync extends Base {
 						'event'       => 'login',
 						'direction'   => 'incoming',
 						'user_email'  => $remote_user['user_email'] ?? $username,
+						'target_site' => $this->get_site_url(),
 						'source_site' => $site['url'],
 						'status'      => 'error',
 						'message'     => $local_user->get_error_message(),
-						'payload'     => array( 'username' => $username ),
+						'payload'     => $remote_user,
 					)
 				);
 
@@ -261,13 +383,11 @@ class Sync extends Base {
 					'event'       => 'login',
 					'direction'   => 'incoming',
 					'user_email'  => $local_user->user_email,
+					'target_site' => $this->get_site_url(),
 					'source_site' => $site['url'],
 					'status'      => 'success',
 					'message'     => 'User imported and logged in from remote site',
-					'payload'     => array(
-						'username' => $username,
-						'roles'    => $remote_user['roles'] ?? array(),
-					),
+					'payload'     => $remote_user,
 				)
 			);
 
@@ -278,62 +398,16 @@ class Sync extends Base {
 	}
 
 	/**
-	 * Fetch a user from a remote site via REST.
-	 *
-	 * @param string $username Username to check.
-	 * @param string $password Password to verify.
-	 * @param array  $site     Site configuration (url, key, etc.).
-	 * @return array|\WP_Error Remote user array or WP_Error on failure.
-	 */
-	private function fetch_remote_user( string $username, string $password, array $site ): array|\WP_Error {
-		$endpoint  = trailingslashit( $site['url'] ) . 'wp-json/entireus/v1/get-user';
-		$body      = wp_json_encode(
-			array(
-				'username' => $username,
-				'password' => $password,
-			)
-		);
-		$signature = hash_hmac( 'sha256', $body, $this->get_secret() );
-
-		$response = wp_remote_post(
-			$endpoint,
-			array(
-				'timeout' => 15,
-				'headers' => array(
-					'Content-Type'         => 'application/json',
-					'X-EntireUS-Signature' => $signature,
-					'X-EntireUS-Timestamp' => time(),
-					'X-EntireUS-Site'      => $this->get_site_url(),
-				),
-				'body'    => $body,
-			)
-		);
-		
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
-
-		$code = wp_remote_retrieve_response_code( $response );
-		if ( $code !== 200 ) {
-			return new \WP_Error( 'entireus_remote_' . $code, 'Remote lookup failed' );
-		}
-
-		$data = json_decode( wp_remote_retrieve_body( $response ), true );
-
-		return $data['user'] ?? new \WP_Error( 'entireus_no_user', 'No user in response' );
-	}
-
-	/**
 	 * Create or update a local user from remote payload.
 	 *
 	 * @param array $remote Remote user payload.
 	 *
-	 * @return \WP_User|\WP_Error Local WP_User instance or WP_Error on failure.
+	 * @return WP_User|WP_Error Local WP_User instance or WP_Error on failure.
 	 */
-	private function create_local_user( array $remote ): \WP_User|\WP_Error {
+	private function create_local_user( array $remote ): WP_User|WP_Error {
 		$email = sanitize_email( $remote['user_email'] ?? '' );
 		if ( ! $email ) {
-			return new \WP_Error( 'entireus_bad_email', 'Remote user has no email' );
+			return new WP_Error( 'entireus_bad_email', 'Remote user has no email' );
 		}
 
 		$existing = get_user_by( 'email', $email );
@@ -351,8 +425,8 @@ class Sync extends Base {
 			'description'  => sanitize_textarea_field( $remote['description'] ?? '' ),
 		);
 
-		if ( ! empty( $remote['password_hash'] ) ) {
-			$user_data['user_pass'] = $remote['password_hash'];
+		if ( ! empty( $remote['password'] ) ) {
+			$user_data['user_pass'] = $remote['password'];
 		} else {
 			$user_data['user_pass'] = wp_generate_password( 24 );
 		}
@@ -368,17 +442,7 @@ class Sync extends Base {
 			return $user_id;
 		}
 
-		if ( ! empty( $remote['password_hash'] ) ) {
-			global $wpdb;
-			$wpdb->update(
-				$wpdb->users,
-				array( 'user_pass' => $remote['password_hash'] ),
-				array( 'ID' => $user_id )
-			);
-			wp_cache_delete( $user_id, 'users' );
-		}
-
-		$wp_user = new \WP_User( $user_id );
+		$wp_user = new WP_User( $user_id );
 
 		if ( ! empty( $remote['roles'] ) && is_array( $remote['roles'] ) ) {
 			$this->apply_roles( $wp_user, $remote['roles'], $this->get_roles() );
@@ -399,7 +463,8 @@ class Sync extends Base {
 	 *
 	 * @param array               $remote Remote payload.
 	 * @param string              $email Sanitized user email.
-	 * @param \WP_User|false|null $existing Existing local user if any.
+	 * @param WP_User|false|null $existing Existing local user if any.
+	 *
 	 * @return string
 	 */
 	private function build_user_login( array $remote, string $email, $existing ): string {
@@ -419,12 +484,13 @@ class Sync extends Base {
 	/**
 	 * Apply roles to a WP_User instance, filtering by allowed list.
 	 *
-	 * @param \WP_User $wp_user User object to modify.
+	 * @param WP_User $wp_user User object to modify.
 	 * @param array    $roles Roles from remote payload.
 	 * @param array    $allowed Allowed roles from settings.
+	 *
 	 * @return void
 	 */
-	private function apply_roles( \WP_User $wp_user, array $roles, array $allowed ): void {
+	private function apply_roles( WP_User $wp_user, array $roles, array $allowed ): void {
 		$wp_user->set_role( '' );
 		foreach ( $roles as $role ) {
 			$role = sanitize_key( $role );

@@ -12,6 +12,7 @@ use EntireUserSync\Admin\Admin;
 use EntireUserSync\Common\Abstracts\Base;
 use EntireUserSync\Common\Traits\Requester;
 use EntireUserSync\Frontend\Frontend;
+use EntireUserSync\Sync\Api;
 use EntireUserSync\Sync\Sync;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -79,5 +80,6 @@ final class Init extends Base {
 		}
 
 		new Sync();
+		new Api();
 	}
 }
