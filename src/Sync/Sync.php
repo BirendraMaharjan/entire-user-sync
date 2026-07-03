@@ -84,6 +84,7 @@ class Sync extends Base {
 	 * Decide whether the user should be synced outbound.
 	 *
 	 * @param int $user_id User ID.
+	 *
 	 * @return bool True if allowed, false otherwise.
 	 */
 	public function allow_sync( int $user_id ): bool {
@@ -96,7 +97,7 @@ class Sync extends Base {
 			define( 'ENTIREUS_INCOMING_SYNC', true );
 		}
 
-		$user         = get_userdata( $user_id );
+		$user = get_userdata( $user_id );
 		if ( ! $user ) {
 			$this->write_log(
 				array(
@@ -105,8 +106,8 @@ class Sync extends Base {
 					'user_email' => $user->user_email,
 					'status'     => 'error',
 					'message'    => 'User does not exist.',
-					'payload'     => array(
-						'hook' => current_filter(),
+					'payload'    => array(
+						'hook'       => current_filter(),
 						'user_email' => $user->user_email
 					),
 				)
@@ -123,8 +124,8 @@ class Sync extends Base {
 					'user_email' => $user->user_email,
 					'status'     => 'error',
 					'message'    => 'User does not have the required role.',
-					'payload'     => array(
-						'hook' => current_filter(),
+					'payload'    => array(
+						'hook'       => current_filter(),
 						'user_email' => $user->user_email
 					),
 
@@ -167,8 +168,11 @@ class Sync extends Base {
 
 		if ( is_wp_error( $response ) ) {
 			return array(
-				'status'  => 'error',
-				'message' => $response->get_error_message(),
+				'status'   => 'error',
+				'data'     => $data,
+				'message'  => $response->get_error_message(),
+				'endpoint' => $endpoint,
+				'request'  => $data,
 			);
 		}
 
@@ -177,10 +181,12 @@ class Sync extends Base {
 		$decoded_body  = json_decode( $response_body, true );
 
 		return array(
-			'status'  => ( $code >= 200 && $code < 300 ) ? 'success' : 'error',
-			'code'    => $code,
-			'data'    => $decoded_body,
-			'message' => $decoded_body['message'] ?? '',
+			'status'   => ( $code >= 200 && $code < 300 ) ? 'success' : 'error',
+			'code'     => $code,
+			'data'     => $decoded_body,
+			'message'  => $decoded_body['message'] ?? '',
+			'endpoint' => $endpoint,
+			'request'  => $data,
 		);
 	}
 
@@ -229,7 +235,7 @@ class Sync extends Base {
 					'source_site' => $this->get_site_url(),
 					'status'      => $response['status'],
 					'message'     => $response['message'] ?? '',
-					'payload'     => $payload,
+					'payload'     => $response,
 				)
 			);
 		}
@@ -247,17 +253,17 @@ class Sync extends Base {
 	 */
 	private function build_payload( WP_User $user, array $site ): array {
 		$payload = array(
-			'user_login'    => $user->user_login,
-			'user_email'    => $user->user_email,
-			'first_name'    => $user->first_name,
-			'last_name'     => $user->last_name,
-			'display_name'  => $user->display_name,
-			'user_url'      => $user->user_url,
-			'description'   => $user->description,
-			'roles'         => $user->roles,
-			'source_site'   => $this->get_site_url(),
-			'target_site'   => $site['url'],
-			'hook'          => current_filter()
+			'user_login'   => $user->user_login,
+			'user_email'   => $user->user_email,
+			'first_name'   => $user->first_name,
+			'last_name'    => $user->last_name,
+			'display_name' => $user->display_name,
+			'user_url'     => $user->user_url,
+			'description'  => $user->description,
+			'roles'        => $user->roles,
+			'source_site'  => $this->get_site_url(),
+			'target_site'  => $site['url'],
+			'hook'         => current_filter()
 		);
 
 		$meta_keys       = $this->get_meta_keys();
@@ -318,7 +324,7 @@ class Sync extends Base {
 					'target_site' => $site['url'],
 					'status'      => $response['status'],
 					'message'     => $response['message'] ?? '',
-					'payload'     => array( 'email' => $email ),
+					'payload'     => $response,
 				)
 			);
 		}
@@ -329,9 +335,10 @@ class Sync extends Base {
 	/**
 	 * Attempt to authenticate by checking remote sites for the user.
 	 *
-	 * @param mixed  $user     WP_User or other auth value.
+	 * @param mixed $user WP_User or other auth value.
 	 * @param string $username Username.
 	 * @param string $password Password.
+	 *
 	 * @return mixed WP_User or original $user on failure.
 	 */
 	public function maybe_import_remote_user( $user, string $username, string $password ) {
@@ -349,8 +356,8 @@ class Sync extends Base {
 			$response = $this->send_request(
 				$this->endpoint( $site, 'get-user' ),
 				array(
-					'username'       => $username,
-					'password'       => $password,
+					'username'    => $username,
+					'password'    => $password,
 					'target_site' => $site['url'],
 					'source_site' => $this->get_site_url()
 				)
@@ -360,7 +367,7 @@ class Sync extends Base {
 				continue;
 			}
 
-			$remote_user = $response['data']['user'] ?? null;
+			$remote_user             = $response['data']['user'] ?? null;
 			$remote_user['password'] = $password;
 
 			$local_user = $this->create_user( $remote_user );
@@ -375,7 +382,7 @@ class Sync extends Base {
 						'source_site' => $site['url'],
 						'status'      => 'error',
 						'message'     => $local_user->get_error_message(),
-						'payload'     => $remote_user,
+						'payload'     => $response,
 					)
 				);
 
@@ -391,7 +398,7 @@ class Sync extends Base {
 					'source_site' => $site['url'],
 					'status'      => 'success',
 					'message'     => 'User imported and logged in from remote site',
-					'payload'     => $remote_user,
+					'payload'     => $response,
 				)
 			);
 
@@ -399,5 +406,73 @@ class Sync extends Base {
 		}
 
 		return $user;
+	}
+
+	/**
+	 * Handle password reset event.
+	 *
+	 * @param \WP_User $user User object.
+	 * @param string $new_pass New password.
+	 */
+	public function on_password_reset( \WP_User $user, string $new_pass ): void {
+		$this->sync_password( $user, $new_pass );
+	}
+
+	/**
+	 * Handle low-level set password action.
+	 *
+	 * @param string $password New password.
+	 * @param int $user_id User ID.
+	 */
+	public function on_set_password( string $password, int $user_id ): void {
+		if ( $user_id ) {
+			$this->sync_password( $user_id, $password );
+		}
+	}
+
+	/**
+	 * Sync a user's password hash to remote sites.
+	 *
+	 * @param $user
+	 * @param string $password
+	 *
+	 * @return array Results per site.
+	 */
+	public function sync_password( $user, string $password ): array {
+		$results = array();
+
+		if ( ! $user instanceof WP_User ) {
+			$user = get_userdata( (int) $user );
+		}
+
+		if ( ! $user instanceof WP_User ) {
+			return $results;
+		}
+
+		foreach ( $this->get_active_sites() as $site ) {
+			$response                            = $this->send_request(
+				$this->endpoint( $site, 'sync-password' ),
+				array(
+					'user_email'    => $user->user_email,
+					'password_hash' => $password,
+				)
+			);
+			$results[ $this->site_key( $site ) ] = $response;
+
+			$this->write_log(
+				array(
+					'event'       => 'password',
+					'direction'   => 'outgoing',
+					'user_email'  => $user->user_email,
+					'target_site' => $this->get_site_url(),
+					'source_site' => $site['url'],
+					'status'      => $response['status'],
+					'message'     => $response['message'] ?? '',
+					'payload'     => $response,
+				)
+			);
+		}
+
+		return $results;
 	}
 }

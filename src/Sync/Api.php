@@ -142,7 +142,6 @@ class Api {
 	}
 
 	/**
-	 * @param string $key
 	 * @param WP_REST_Request $request
 	 * @param string $message
 	 *
@@ -284,9 +283,8 @@ class Api {
 	public function handle_sync_password( WP_REST_Request $request ): WP_REST_Response {
 		$data  = $request->get_json_params();
 		$email = sanitize_email( $data['user_email'] ?? '' );
-		$hash  = $data['password_hash'] ?? '';
 
-		if ( ! $email || ! $hash ) {
+		if ( ! $email ) {
 			return new WP_REST_Response( array( 'message' => 'Missing email or password_hash.' ), 400 );
 		}
 
@@ -296,19 +294,20 @@ class Api {
 			return new WP_REST_Response( array( 'message' => 'User not found.' ), 404 );
 		}
 
-		$this->write_password_hash( $user->ID, $hash );
+		if ( $user instanceof WP_User && ! empty( $data['password'] ) ) {
+			wp_set_password( $data['password'], $user->ID );
+		}
 
 		$this->write_log(
 			array(
 				'event'      => 'password',
-				'direction'  => 'incoming',
-				'user_email' => $email,
+				'direction'   => 'incoming',
+				'user_email'  => $email,
+				'source_site' => $data['source_site'] ?? '',
+				'target_site' => $data['target_site'] ?? '',
 				'status'     => 'success',
-				'message'    => 'Password hash synced from remote.',
-				'payload'    => array(
-					'user_email'    => $email,
-					'password_hash' => '[redacted]',
-				),
+				'message'    => 'Password synced from remote.',
+				'payload'     => $data,
 			)
 		);
 
