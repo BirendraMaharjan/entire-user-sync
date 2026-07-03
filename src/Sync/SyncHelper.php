@@ -140,9 +140,8 @@ trait SyncHelper {
 			$this->apply_roles( $wp_user, $data['roles'], $this->get_roles() );
 		}
 
-		$meta_keys       = $this->get_meta_keys();
 		if ( ! empty( $data['meta'] ) && is_array( $data['meta'] ) ) {
-			$this->apply_meta( $user_id, $data['meta'], $meta_keys );
+			$this->apply_meta( $user_id, $data['meta'] );
 		}
 
 		update_user_meta( $user_id, '_entireus_imported_from', sanitize_text_field( $data['site_url'] ?? '' ) );
@@ -172,15 +171,16 @@ trait SyncHelper {
 	/**
 	 * Apply user meta from remote payload respecting allowed meta keys.
 	 *
-	 * @param int   $user_id User ID to update.
+	 * @param int $user_id User ID to update.
 	 * @param array $meta Meta array from remote.
-	 * @param array $meta_keys Allowed meta keys.
+	 *
 	 * @return void
 	 */
-	public function apply_meta( int $user_id, array $meta, array $meta_keys ): void {
+	public function apply_meta( int $user_id, array $meta ): void {
+		$allowed_meta_keys       = $this->get_meta_keys();
 		foreach ( $meta as $key => $value ) {
 			$key = sanitize_key( $key );
-			if ( empty( $meta_keys ) || in_array( $key, $meta_keys, true ) ) {
+			if ( empty( $allowed_meta_keys ) || in_array( $key, $allowed_meta_keys, true ) ) {
 				update_user_meta( $user_id, $key, $value );
 			}
 		}
