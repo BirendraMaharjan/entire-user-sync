@@ -332,6 +332,7 @@ class Sync extends Base {
 	 * @return mixed WP_User or original $user on failure.
 	 */
 	public function maybe_import_remote_user( $user, string $username, string $password ) {
+
 		if ( $user instanceof WP_User ) {
 			return $user;
 		}
@@ -405,6 +406,7 @@ class Sync extends Base {
 	 * @return WP_User|WP_Error Local WP_User instance or WP_Error on failure.
 	 */
 	private function create_local_user( array $remote ): WP_User|WP_Error {
+
 		$email = sanitize_email( $remote['user_email'] ?? '' );
 		if ( ! $email ) {
 			return new WP_Error( 'entireus_bad_email', 'Remote user has no email' );

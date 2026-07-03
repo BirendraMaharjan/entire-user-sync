@@ -275,7 +275,7 @@ class Api {
 	 *
 	 * @return int|WP_Error User ID or error.
 	 */
-	private function save_synced_user( array $data, string $email, ?WP_User $existing ) {
+	private function save_synced_user( array $data, string $email, $existing ) {
 		$user_data = array(
 			'user_email'   => $email,
 			'user_login'   => $this->resolve_user_login( $data, $email ),
