@@ -11,6 +11,8 @@
 namespace EntireUserSync\Sync;
 
 use EntireUserSync\Admin\Settings\Settings;
+use WP_Error;
+use WP_User;
 
 trait SyncHelper {
 
@@ -90,6 +92,98 @@ trait SyncHelper {
 		}
 
 		return $user_login;
+	}
+
+	/**
+	 * Create or update a local user from remote payload.
+	 *
+	 * @param array $data Remote user payload.
+	 *
+	 * @return WP_User|WP_Error Local WP_User instance or WP_Error on failure.
+	 */
+	public function create_user( array $data ): WP_User|WP_Error {
+
+		$email = sanitize_email( $data['user_email'] ?? '' );
+		if ( ! $email ) {
+			return new WP_Error( 'entireus_bad_email', 'Remote user has no email' );
+		}
+
+		$user_data = array(
+			'user_email'   => $email,
+			'first_name'   => sanitize_text_field( $data['first_name'] ?? '' ),
+			'last_name'    => sanitize_text_field( $data['last_name'] ?? '' ),
+			'display_name' => sanitize_text_field( $data['display_name'] ?? '' ),
+			'user_url'     => esc_url_raw( $data['user_url'] ?? '' ),
+			'description'  => sanitize_textarea_field( $data['description'] ?? '' ),
+			'user_pass'    => sanitize_text_field( $data['password'] ?? '' ),
+		);
+
+		$existing = get_user_by( 'email', $email );
+		if ( $existing ) {
+			$user_data['ID'] = $existing->ID;
+			$user_id         = wp_update_user( $user_data );
+		} else {
+			$username = sanitize_text_field( $data['user_login'] ?? '' );
+
+			$user_data['user_pass']  = wp_generate_password();
+			$user_data['user_login'] = $this->build_user_login( $username, $email );
+			$user_id                    = wp_insert_user( $user_data );
+		}
+
+		if ( is_wp_error( $user_id ) ) {
+			return $user_id;
+		}
+
+		$wp_user = new WP_User( $user_id );
+
+		if ( ! empty( $data['roles'] ) && is_array( $data['roles'] ) ) {
+			$this->apply_roles( $wp_user, $data['roles'], $this->get_roles() );
+		}
+
+		$meta_keys       = $this->get_meta_keys();
+		if ( ! empty( $data['meta'] ) && is_array( $data['meta'] ) ) {
+			$this->apply_meta( $user_id, $data['meta'], $meta_keys );
+		}
+
+		update_user_meta( $user_id, '_entireus_imported_from', sanitize_text_field( $data['site_url'] ?? '' ) );
+
+		return $wp_user;
+	}
+
+	/**
+	 * Apply roles to a WP_User instance, filtering by allowed list.
+	 *
+	 * @param WP_User $wp_user User object to modify.
+	 * @param array    $roles Roles from remote payload.
+	 * @param array    $allowed Allowed roles from settings.
+	 *
+	 * @return void
+	 */
+	public function apply_roles( WP_User $wp_user, array $roles, array $allowed ): void {
+		$wp_user->set_role( '' );
+		foreach ( $roles as $role ) {
+			$role = sanitize_key( $role );
+			if ( get_role( $role ) && ( empty( $allowed ) || in_array( $role, $allowed, true ) ) ) {
+				$wp_user->add_role( $role );
+			}
+		}
+	}
+
+	/**
+	 * Apply user meta from remote payload respecting allowed meta keys.
+	 *
+	 * @param int   $user_id User ID to update.
+	 * @param array $meta Meta array from remote.
+	 * @param array $meta_keys Allowed meta keys.
+	 * @return void
+	 */
+	public function apply_meta( int $user_id, array $meta, array $meta_keys ): void {
+		foreach ( $meta as $key => $value ) {
+			$key = sanitize_key( $key );
+			if ( empty( $meta_keys ) || in_array( $key, $meta_keys, true ) ) {
+				update_user_meta( $user_id, $key, $value );
+			}
+		}
 	}
 
 	/**

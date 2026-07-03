@@ -231,17 +231,25 @@ class Api {
 
 		$email    = sanitize_email( $data['user_email'] );
 		$existing = get_user_by( 'email', $email );
-		$user_id  = $this->save_synced_user( $data, $email, $existing );
-
-		if ( is_wp_error( $user_id ) ) {
-			return new WP_REST_Response( array( 'message' => $user_id->get_error_message() ), 500 );
-		}
-
-		$this->sync_synced_user_roles( $user_id, $data['roles'] ?? array() );
-		$this->sync_synced_user_meta( $user_id, $data['meta'] ?? array() );
-
+		$local_user     = $this->create_user( $data );
 
 		$event = $existing ? 'update' : 'create';
+		if ( is_wp_error( $local_user ) ) {
+			$this->write_log(
+				array(
+					'event'       => $event,
+					'direction'   => 'incoming',
+					'user_email'  => $email,
+					'source_site' => $data['source_site'] ?? '',
+					'target_site' => $data['target_site'] ?? '',
+					'status'      => 'error',
+					'message'     => $local_user->get_error_message(),
+					'payload'     => $data,
+				)
+			);
+
+			return new WP_REST_Response( array( 'message' => $local_user->get_error_message() ), 500 );
+		}
 
 		$this->write_log(
 			array(
@@ -260,78 +268,10 @@ class Api {
 			array(
 				'message' => $existing ? 'User updated.' : 'User created.',
 				'code'    => $existing ? 'user_updated' : 'user_created',
-				'user_id' => $user_id,
+				'user_id' => $local_user->ID,
 			),
 			200
 		);
-	}
-
-	/**
-	 * Save a synced user by creating or updating the local account.
-	 *
-	 * @param array $data Raw request payload.
-	 * @param string $email Sanitized email.
-	 * @param WP_User|null $existing Existing user, when found.
-	 *
-	 * @return int|WP_Error User ID or error.
-	 */
-	private function save_synced_user( array $data, string $email, $existing ) {
-		$user_data = array(
-			'user_email'   => $email,
-			'first_name'   => sanitize_text_field( $data['first_name'] ?? '' ),
-			'last_name'    => sanitize_text_field( $data['last_name'] ?? '' ),
-			'display_name' => sanitize_text_field( $data['display_name'] ?? '' ),
-			'user_url'     => esc_url_raw( $data['user_url'] ?? '' ),
-			'description'  => sanitize_textarea_field( $data['description'] ?? '' ),
-		);
-
-		if ( $existing ) {
-			$user_data['ID'] = $existing->ID;
-
-			$user = wp_update_user( $user_data );
-		} else {
-			$username = sanitize_text_field( $data['user_login'] ?? '' );
-
-			$user_data['user_pass']  = wp_generate_password();
-			$user_data['user_login'] = $this->build_user_login( $username, $email );
-			$user                    = wp_insert_user( $user_data );
-		}
-
-		return $user;
-	}
-
-	/**
-	 * Sync remote roles to the local account.
-	 *
-	 * @param int $user_id User ID.
-	 * @param array $roles Requested roles.
-	 */
-	private function sync_synced_user_roles( int $user_id, array $roles ): void {
-		if ( empty( $roles ) ) {
-			return;
-		}
-
-		$wp_user = new WP_User( $user_id );
-		$wp_user->set_role( '' );
-
-		foreach ( $roles as $role ) {
-			$role = sanitize_key( $role );
-			if ( get_role( $role ) ) {
-				$wp_user->add_role( $role );
-			}
-		}
-	}
-
-	/**
-	 * Sync remote meta values to the local account.
-	 *
-	 * @param int $user_id User ID.
-	 * @param array $meta Meta values.
-	 */
-	private function sync_synced_user_meta( int $user_id, array $meta ): void {
-		foreach ( $meta as $key => $value ) {
-			update_user_meta( $user_id, sanitize_key( $key ), $value );
-		}
 	}
 
 	/**
