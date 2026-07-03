@@ -278,7 +278,6 @@ class Api {
 	private function save_synced_user( array $data, string $email, $existing ) {
 		$user_data = array(
 			'user_email'   => $email,
-			'user_login'   => $this->resolve_user_login( $data, $email ),
 			'first_name'   => sanitize_text_field( $data['first_name'] ?? '' ),
 			'last_name'    => sanitize_text_field( $data['last_name'] ?? '' ),
 			'display_name' => sanitize_text_field( $data['display_name'] ?? '' ),
@@ -289,27 +288,16 @@ class Api {
 		if ( $existing ) {
 			$user_data['ID'] = $existing->ID;
 
-			return wp_update_user( $user_data );
+			$user = wp_update_user( $user_data );
+		} else {
+			$username = sanitize_text_field( $data['user_login'] ?? '' );
+
+			$user_data['user_pass']  = wp_generate_password();
+			$user_data['user_login'] = $this->build_user_login( $username, $email );
+			$user                    = wp_insert_user( $user_data );
 		}
 
-		return wp_insert_user( $user_data );
-	}
-
-	/**
-	 * Resolve a usable login name from the payload.
-	 *
-	 * @param array $data Request payload.
-	 * @param string $email Sanitized email.
-	 *
-	 * @return string
-	 */
-	private function resolve_user_login( array $data, string $email ): string {
-		$user_login = sanitize_user( $data['user_login'] ?? '' );
-		if ( empty( $user_login ) ) {
-			$user_login = sanitize_user( strstr( $email, '@', true ) );
-		}
-
-		return $user_login;
+		return $user;
 	}
 
 	/**

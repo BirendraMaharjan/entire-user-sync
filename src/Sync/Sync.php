@@ -93,6 +93,10 @@ class Sync extends Base {
 			return false;
 		}
 
+		if ( ! defined( 'ENTIREUS_INCOMING_SYNC' ) ) {
+			define( 'ENTIREUS_INCOMING_SYNC', true );
+		}
+
 		$user         = get_userdata( $user_id );
 		if ( ! $user ) {
 			$this->write_log(
@@ -425,13 +429,8 @@ class Sync extends Base {
 			'display_name' => sanitize_text_field( $remote['display_name'] ?? '' ),
 			'user_url'     => esc_url_raw( $remote['user_url'] ?? '' ),
 			'description'  => sanitize_textarea_field( $remote['description'] ?? '' ),
+			'user_pass'  => sanitize_text_field( $remote['password'] ?? '' ),
 		);
-
-		if ( ! empty( $remote['password'] ) ) {
-			$user_data['user_pass'] = $remote['password'];
-		} else {
-			$user_data['user_pass'] = wp_generate_password( 24 );
-		}
 
 		if ( $existing ) {
 			$user_data['ID'] = $existing->ID;
