@@ -49,7 +49,6 @@ class Sync extends Base {
 		add_action( 'wp_set_password', array( $this, 'on_set_password' ), 10, 2 );*/
 
 		add_filter( 'authenticate', array( $this, 'maybe_import_remote_user' ), 20, 3 );
-
 		// add_action( 'wp_login', array( $this, 'on_local_login' ), 10, 2 );
 	}
 

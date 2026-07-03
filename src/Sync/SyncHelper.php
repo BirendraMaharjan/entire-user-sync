@@ -99,9 +99,9 @@ trait SyncHelper {
 	 *
 	 * @param array $data Remote user payload.
 	 *
-	 * @return WP_User|WP_Error Local WP_User instance or WP_Error on failure.
+	 * @return WP_Error Local WP_User instance or WP_Error on failure.
 	 */
-	public function create_user( array $data ): WP_User|WP_Error {
+	public function create_user( array $data ) {
 
 		$email = sanitize_email( $data['user_email'] ?? '' );
 		if ( ! $email ) {
