@@ -11,7 +11,6 @@ namespace EntireUserSync\Sync;
 
 use EntireUserSync\Common\Abstracts\Base;
 use EntireUserSync\Common\Traits\Requester;
-use WP_Error;
 use WP_User;
 
 /**

@@ -268,7 +268,7 @@ class Api {
 			array(
 				'message' => $existing ? 'User updated.' : 'User created.',
 				'code'    => $existing ? 'user_updated' : 'user_created',
-				'user_id' => $local_user->ID,
+				'user_id' => $local_user,
 			),
 			200
 		);

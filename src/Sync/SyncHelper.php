@@ -134,10 +134,8 @@ trait SyncHelper {
 			return $user_id;
 		}
 
-		$wp_user = new WP_User( $user_id );
-
 		if ( ! empty( $data['roles'] ) && is_array( $data['roles'] ) ) {
-			$this->apply_roles( $wp_user, $data['roles'], $this->get_roles() );
+			$this->apply_roles( $user_id, $data['roles'], $this->get_roles() );
 		}
 
 		if ( ! empty( $data['meta'] ) && is_array( $data['meta'] ) ) {
@@ -146,25 +144,23 @@ trait SyncHelper {
 
 		update_user_meta( $user_id, '_entireus_imported_from', sanitize_text_field( $data['site_url'] ?? '' ) );
 
-		return $wp_user;
+		return $user_id;
 	}
 
 	/**
 	 * Apply roles to a WP_User instance, filtering by allowed list.
 	 *
-	 * @param WP_User $wp_user User object to modify.
-	 * @param array    $roles Roles from remote payload.
-	 * @param array    $allowed Allowed roles from settings.
+	 * @param int $user_id User ID to modify.
+	 * @param array $roles Roles from remote payload.
 	 *
 	 * @return void
 	 */
-	public function apply_roles( WP_User $wp_user, array $roles, array $allowed ): void {
+	public function apply_roles( int $user_id, array $roles ): void {
+		$wp_user = new WP_User( $user_id );
 		$wp_user->set_role( '' );
 		foreach ( $roles as $role ) {
 			$role = sanitize_key( $role );
-			if ( get_role( $role ) && ( empty( $allowed ) || in_array( $role, $allowed, true ) ) ) {
-				$wp_user->add_role( $role );
-			}
+			$wp_user->add_role( $role );
 		}
 	}
 
