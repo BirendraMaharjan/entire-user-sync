@@ -460,29 +460,6 @@ class Sync extends Base {
 	}
 
 	/**
-	 * Build a safe user_login string from remote payload or email.
-	 *
-	 * @param array               $remote Remote payload.
-	 * @param string              $email Sanitized user email.
-	 * @param WP_User|false|null $existing Existing local user if any.
-	 *
-	 * @return string
-	 */
-	private function build_user_login( array $remote, string $email, $existing ): string {
-		// Prefer remote user_login when provided; fall back to the local part of the email.
-		$user_login = sanitize_user( $remote['user_login'] ?? '' );
-		if ( empty( $user_login ) ) {
-			$user_login = sanitize_user( strstr( $email, '@', true ) );
-		}
-
-		if ( ! $existing && username_exists( $user_login ) ) {
-			$user_login .= '_' . substr( md5( $email ), 0, 5 );
-		}
-
-		return $user_login;
-	}
-
-	/**
 	 * Apply roles to a WP_User instance, filtering by allowed list.
 	 *
 	 * @param WP_User $wp_user User object to modify.
