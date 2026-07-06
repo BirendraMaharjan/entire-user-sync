@@ -103,12 +103,12 @@ class Sync extends Base {
 				array(
 					'event'      => 'sync',
 					'direction'  => 'outgoing',
-					'user_email' => $user->user_email,
+					'user_email' => '',
 					'status'     => 'error',
 					'message'    => 'User does not exist.',
 					'payload'    => array(
-						'hook'       => current_filter(),
-						'user_email' => $user->user_email
+						'hook'    => current_filter(),
+						'user_id' => $user_id
 					),
 				)
 			);
@@ -148,6 +148,8 @@ class Sync extends Base {
 	 * @param string $endpoint URL to call.
 	 * @param array $data Data to send.
 	 * @param string $method HTTP method.
+	 *
+	 * @return array|WP_Error
 	 */
 	public function send_request( string $endpoint, array $data, string $method = 'POST' ) {
 		$body      = wp_json_encode( $data );
@@ -174,34 +176,43 @@ class Sync extends Base {
 
 		$code = wp_remote_retrieve_response_code( $response );
 		$body = wp_remote_retrieve_body( $response );
-		$data = json_decode( $body, true );
 
+		$decoded = array();
 
-		if ( JSON_ERROR_NONE !== json_last_error() ) {
-			return new WP_Error(
-				'entireus_invalid_json',
-				'Invalid JSON response from remote site.',
-				array(
-					'code'     => $code,
-					'body'     => $body,
-					'endpoint' => $endpoint,
-				)
-			);
+		if ( '' !== $body ) {
+			$decoded = json_decode( $body, true );
+
+			if ( JSON_ERROR_NONE !== json_last_error() ) {
+				return new WP_Error(
+					'entireus_invalid_json',
+					'Invalid JSON response from remote site.',
+					array(
+						'code'     => $code,
+						'body'     => $body,
+						'endpoint' => $endpoint,
+						'status'   => 'error',
+					)
+				);
+			}
 		}
 
 		if ( $code < 200 || $code >= 300 ) {
 			return new WP_Error(
 				'entireus_remote_error',
-				$data['message'] ?? sprintf( 'Remote request failed (%d).', $code ),
+				$decoded['message'] ?? sprintf( 'Remote request failed (%d).', $code ),
 				array(
 					'code'     => $code,
-					'data'     => $data,
+					'data'     => $decoded,
 					'endpoint' => $endpoint,
+					'status'   => 'error',
 				)
 			);
 		}
 
-		return $data;
+		// Optionally include the HTTP status code.
+		$decoded['code'] = $code;
+
+		return $decoded;
 	}
 
 	/**
@@ -232,13 +243,30 @@ class Sync extends Base {
 
 		foreach ( $this->get_active_sites() as $site ) {
 
-			$payload  = $this->build_payload( $user, $site );
-			$response = $this->send_request(
+			$request_payload = $this->build_payload( $user, $site );
+			$response        = $this->send_request(
 				$this->endpoint( $site, 'sync-user' ),
-				$payload
+				$request_payload
 			);
 
 			$results[ $this->site_key( $site ) ] = $response;
+
+			if ( is_wp_error( $response ) ) {
+				$this->write_log(
+					array(
+						'event'       => 'update',
+						'direction'   => 'outgoing',
+						'user_email'  => $user->user_email,
+						'target_site' => $site['url'],
+						'source_site' => $this->get_site_url(),
+						'status'      => 'error',
+						'message'     => $response->get_error_message(),
+						'payload'     => $response->get_error_data(),
+					)
+				);
+
+				continue;
+			}
 
 			$this->write_log(
 				array(
@@ -247,7 +275,7 @@ class Sync extends Base {
 					'user_email'  => $user->user_email,
 					'target_site' => $site['url'],
 					'source_site' => $this->get_site_url(),
-					'status'      => $response['status'],
+					'status'      => 'success',
 					'message'     => $response['message'] ?? '',
 					'payload'     => $response,
 				)
@@ -274,7 +302,7 @@ class Sync extends Base {
 			'display_name' => $user->display_name,
 			'user_url'     => $user->user_url,
 			'description'  => $user->description,
-			'roles'        => empty( $user->roles ) ? array('none') : $user->roles,
+			'roles'        => empty( $user->roles ) ? array( 'none' ) : $user->roles,
 			'source_site'  => $this->get_site_url(),
 			'target_site'  => $site['url'],
 			'hook'         => current_filter()
@@ -295,6 +323,7 @@ class Sync extends Base {
 	 * @param int $user_id User ID.
 	 */
 	public function maybe_auto_delete_user( int $user_id ): void {
+
 		if ( ! $this->allow_sync( $user_id ) ) {
 			return;
 		}
@@ -329,6 +358,23 @@ class Sync extends Base {
 
 			$results[ $this->site_key( $site ) ] = $response;
 
+			if ( is_wp_error( $response ) ) {
+				$this->write_log(
+					array(
+						'event'       => 'delete',
+						'direction'   => 'outgoing',
+						'user_email'  => $email,
+						'source_site' => $this->get_site_url(),
+						'target_site' => $site['url'],
+						'status'      => 'error',
+						'message'     => $response->get_error_message(),
+						'payload'     => $response->get_error_data(),
+					)
+				);
+
+				continue;
+			}
+
 			$this->write_log(
 				array(
 					'event'       => 'delete',
@@ -336,7 +382,7 @@ class Sync extends Base {
 					'user_email'  => $email,
 					'source_site' => $this->get_site_url(),
 					'target_site' => $site['url'],
-					'status'      => $response['status'],
+					'status'      => 'success',
 					'message'     => $response['message'] ?? '',
 					'payload'     => $response,
 				)
@@ -349,21 +395,19 @@ class Sync extends Base {
 	/**
 	 * Attempt to authenticate by checking remote sites for the user.
 	 *
-	 * @param mixed $user WP_User or other auth value.
+	 * @param WP_User|WP_Error|null $user Authenticated user, WP_Error or null.
 	 * @param string $username Username.
 	 * @param string $password Password.
 	 *
-	 * @return mixed WP_User or original $user on failure.
+	 * @return WP_User|WP_Error|null
 	 */
 	public function maybe_import_remote_user( $user, string $username, string $password ) {
 
 		if ( $user instanceof WP_User ) {
-			error_log('$user');
 			return $user;
 		}
 
 		if ( empty( $username ) ) {
-			error_log('$username');
 			return $user;
 		}
 
@@ -375,7 +419,7 @@ class Sync extends Base {
 					'username'    => $username,
 					'password'    => $password,
 					'target_site' => $site['url'],
-					'source_site' => $this->get_site_url()
+					'source_site' => $this->get_site_url(),
 				)
 			);
 
@@ -398,8 +442,25 @@ class Sync extends Base {
 			}
 
 			$remote_user             = $response['user'] ?? null;
-			$remote_user['password'] = $password;
+			if ( empty( $remote_user ) ) {
+				$this->write_log(
+					array(
+						'event'       => 'login',
+						'direction'   => 'outgoing',
+						'user_email'  => $username,
+						'target_site' => $site['url'],
+						'source_site' => $this->get_site_url(),
+						'status'      => 'error',
+						'message'     => 'No user found on remote site.',
+						'payload'     => $response,
+					)
+				);
 
+				continue;
+			}
+
+
+			$remote_user['password'] = $password;
 			$local_user = $this->create_user( $remote_user );
 
 			if ( is_wp_error( $local_user ) ) {
@@ -463,8 +524,8 @@ class Sync extends Base {
 	/**
 	 * Sync a user's password hash to remote sites.
 	 *
-	 * @param $user
-	 * @param string $password
+	 * @param int|WP_User $user User ID or user object.
+	 * @param string      $password Password hash.
 	 *
 	 * @return array Results per site.
 	 */
@@ -480,23 +541,41 @@ class Sync extends Base {
 		}
 
 		foreach ( $this->get_active_sites() as $site ) {
-			$response                            = $this->send_request(
+			$response = $this->send_request(
 				$this->endpoint( $site, 'sync-password' ),
 				array(
 					'user_email'    => $user->user_email,
-					'password_hash' => $password,
+					'password' => $password,
 				)
 			);
+
 			$results[ $this->site_key( $site ) ] = $response;
+
+			if ( is_wp_error( $response ) ) {
+				$this->write_log(
+					array(
+						'event'       => 'password',
+						'direction'   => 'outgoing',
+						'user_email'  => $user->user_email,
+						'target_site' => $site['url'],
+						'source_site' => $this->get_site_url(),
+						'status'      => 'error',
+						'message'     => $response->get_error_message(),
+						'payload'     => $response->get_error_data(),
+					)
+				);
+
+				continue;
+			}
 
 			$this->write_log(
 				array(
 					'event'       => 'password',
 					'direction'   => 'outgoing',
 					'user_email'  => $user->user_email,
-					'target_site' => $this->get_site_url(),
-					'source_site' => $site['url'],
-					'status'      => $response['status'],
+					'target_site' => $site['url'],
+					'source_site' => $this->get_site_url(),
+					'status'      => 'success',
 					'message'     => $response['message'] ?? '',
 					'payload'     => $response,
 				)

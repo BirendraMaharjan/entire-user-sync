@@ -301,8 +301,8 @@ trait SyncHelper {
 			return;
 		}
 
-		error_log( wp_debug_backtrace_summary() );
-		error_log( current_filter() );
+		/*error_log( wp_debug_backtrace_summary() );
+		error_log( current_filter() );*/
 
 		$this->logger()->log( $args );
 	}

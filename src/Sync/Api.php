@@ -12,6 +12,7 @@ namespace EntireUserSync\Sync;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
+use WP_REST_Server;
 use WP_User;
 
 /**
@@ -20,8 +21,6 @@ use WP_User;
 class Api {
 
 	use SyncHelper;
-
-	private Sync $sync;
 
 	/**
 	 * Api constructor.
@@ -52,10 +51,10 @@ class Api {
 			array_merge(
 				$args,
 				array(
-					'methods'  => 'POST',
+					'methods'  => WP_REST_Server::CREATABLE,
 					'callback' => array( $this, 'handle_get_user' ),
 				)
-			)
+			),
 		);
 
 		register_rest_route(
@@ -64,7 +63,7 @@ class Api {
 			array_merge(
 				$args,
 				array(
-					'methods'  => array( 'POST', 'PUT' ),
+					'methods'  => WP_REST_Server::EDITABLE,
 					'callback' => array( $this, 'handle_sync_user' ),
 				)
 			)
@@ -76,7 +75,7 @@ class Api {
 			array_merge(
 				$args,
 				array(
-					'methods'  => 'POST',
+					'methods'  => WP_REST_Server::CREATABLE,
 					'callback' => array( $this, 'handle_sync_password' ),
 				)
 			)
@@ -88,7 +87,7 @@ class Api {
 			array_merge(
 				$args,
 				array(
-					'methods'  => 'DELETE',
+					'methods'  => WP_REST_Server::DELETABLE,
 					'callback' => array( $this, 'handle_delete_user' ),
 				)
 			)
@@ -100,14 +99,9 @@ class Api {
 	 *
 	 * @param WP_REST_Request $request REST request instance.
 	 *
-	 * @return bool True if signature is valid.
+	 * @return true|WP_Error True if the signature is valid, otherwise a WP_Error.
 	 */
-	public function verify_signature( WP_REST_Request $request ): bool {
-
-		// Mark this as an incoming EntireUS sync request.
-		if ( ! defined( 'ENTIREUS_INCOMING_SYNC' ) ) {
-			define( 'ENTIREUS_INCOMING_SYNC', true );
-		}
+	public function verify_signature( WP_REST_Request $request ) {
 
 		$secret      = $this->get_secret();
 		$signature   = $request->get_header( 'X-EntireUS-Signature' );
@@ -145,16 +139,18 @@ class Api {
 	}
 
 	/**
-	 * @param WP_REST_Request $request
-	 * @param string $message
+	 * Log a failed authentication attempt.
 	 *
-	 * @return bool
+	 * @param WP_REST_Request $request REST request.
+	 * @param string $message Failure message.
+	 *
+	 * @return WP_Error
 	 */
-	private function fail_auth( WP_REST_Request $request, string $message ): bool {
+	private function fail_auth( WP_REST_Request $request, string $message ): WP_Error {
 
 		$source_site = $request->get_header( 'X-EntireUS-Site' );
 
-		$this->write_log( [
+		$this->write_log( array(
 			'event'       => 'auth',
 			'direction'   => 'incoming',
 			'status'      => 'error',
@@ -162,9 +158,13 @@ class Api {
 			'source_site' => esc_url_raw( $source_site ),
 			'target_site' => esc_url_raw( $this->get_site_url() ),
 			'payload'     => wp_unslash( $request->get_json_params() ),
-		] );
+		) );
 
-		return false;
+		return new WP_Error(
+			'entireus_forbidden',
+			$message,
+			array( 'status' => 403 )
+		);
 	}
 
 	/**
@@ -174,7 +174,7 @@ class Api {
 	 *
 	 * @return WP_REST_Response Response object.
 	 */
-	public function handle_get_user( WP_REST_Request $request ): WP_REST_Response {
+	public function handle_get_user( WP_REST_Request $request ) {
 		$params   = $request->get_json_params();
 		$username = sanitize_text_field( $params['username'] ?? '' );
 		$password = $params['password'] ?? '';
@@ -208,16 +208,16 @@ class Api {
 		return new WP_REST_Response(
 			array(
 				'user' => array(
-					'user_login'    => $user->user_login,
-					'user_email'    => $user->user_email,
-					'first_name'    => $user->first_name,
-					'last_name'     => $user->last_name,
-					'display_name'  => $user->display_name,
-					'user_url'      => $user->user_url,
-					'description'   => $user->description,
-					'roles'         => $user->roles,
-					'meta'          => $meta,
-					'site_url'      => get_site_url(),
+					'user_login'   => $user->user_login,
+					'user_email'   => $user->user_email,
+					'first_name'   => $user->first_name,
+					'last_name'    => $user->last_name,
+					'display_name' => $user->display_name,
+					'user_url'     => $user->user_url,
+					'description'  => $user->description,
+					'roles'        => $user->roles,
+					'meta'         => $meta,
+					'site_url'     => get_site_url(),
 				),
 			),
 			200
@@ -238,9 +238,9 @@ class Api {
 			return new WP_REST_Response( array( 'message' => 'Missing user_email.' ), 400 );
 		}
 
-		$email    = sanitize_email( $data['user_email'] );
-		$existing = get_user_by( 'email', $email );
-		$local_user     = $this->create_user( $data );
+		$email      = sanitize_email( $data['user_email'] );
+		$existing   = get_user_by( 'email', $email );
+		$local_user = $this->create_user( $data );
 
 		$event = $existing ? 'update' : 'create';
 		if ( is_wp_error( $local_user ) ) {
@@ -277,7 +277,7 @@ class Api {
 			array(
 				'message' => $existing ? 'User updated.' : 'User created.',
 				'code'    => $existing ? 'user_updated' : 'user_created',
-				'user_id' => $local_user,
+				'user'    => $local_user,
 			),
 			200
 		);
@@ -291,11 +291,12 @@ class Api {
 	 * @return WP_REST_Response
 	 */
 	public function handle_sync_password( WP_REST_Request $request ): WP_REST_Response {
-		$data  = $request->get_json_params();
-		$email = sanitize_email( $data['user_email'] ?? '' );
+		$data     = $request->get_json_params();
+		$email    = sanitize_email( $data['user_email'] ?? '' );
+		$password = $data['password'] ?? '';
 
-		if ( ! $email ) {
-			return new WP_REST_Response( array( 'message' => 'Missing email or password_hash.' ), 400 );
+		if ( ! $email || ! $password ) {
+			return new WP_REST_Response( array( 'message' => 'Missing email or password.' ), 400 );
 		}
 
 		$user = get_user_by( 'email', $email );
@@ -304,19 +305,17 @@ class Api {
 			return new WP_REST_Response( array( 'message' => 'User not found.' ), 404 );
 		}
 
-		if ( $user instanceof WP_User && ! empty( $data['password'] ) ) {
-			wp_set_password( $data['password'], $user->ID );
-		}
+		wp_set_password( $data['password'], $user->ID );
 
 		$this->write_log(
 			array(
-				'event'      => 'password',
+				'event'       => 'password',
 				'direction'   => 'incoming',
 				'user_email'  => $email,
 				'source_site' => $data['source_site'] ?? '',
 				'target_site' => $data['target_site'] ?? '',
-				'status'     => 'success',
-				'message'    => 'Password synced from remote.',
+				'status'      => 'success',
+				'message'     => 'Password synced from remote.',
 				'payload'     => $data,
 			)
 		);
@@ -325,6 +324,7 @@ class Api {
 			array(
 				'message' => 'Password synced.',
 				'code'    => 'password_synced',
+				'user'    => $user,
 			),
 			200
 		);
@@ -368,8 +368,9 @@ class Api {
 
 		return new WP_REST_Response(
 			array(
-				'message' => $deleted ? 'User deleted.' : 'Delete failed.',
-				'code'    => $deleted ? 'user_deleted' : 'delete_failed',
+				'message'    => $deleted ? 'User deleted.' : 'Delete failed.',
+				'code'       => $deleted ? 'user_deleted' : 'delete_failed',
+				'user_email' => $email,
 			),
 			$deleted ? 200 : 500
 		);
