@@ -115,7 +115,7 @@ trait SyncHelper {
 			'display_name' => sanitize_text_field( $data['display_name'] ?? '' ),
 			'user_url'     => esc_url_raw( $data['user_url'] ?? '' ),
 			'description'  => sanitize_textarea_field( $data['description'] ?? '' ),
-			'user_pass'    => sanitize_text_field( $data['password'] ?? '' ),
+			'user_pass'    => sanitize_text_field( $data['user_pass'] ?? '' ),
 		);
 
 		$existing = get_user_by( 'email', $email );

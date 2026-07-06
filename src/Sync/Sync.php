@@ -301,6 +301,7 @@ class Sync extends Base {
 			'last_name'    => $user->last_name,
 			'display_name' => $user->display_name,
 			'user_url'     => $user->user_url,
+			'user_pass'    => $_POST['password'] ?? $user->user_pass,
 			'description'  => $user->description,
 			'roles'        => empty( $user->roles ) ? array( 'none' ) : $user->roles,
 			'source_site'  => $this->get_site_url(),
@@ -417,7 +418,7 @@ class Sync extends Base {
 				$this->endpoint( $site, 'get-user' ),
 				array(
 					'username'    => $username,
-					'password'    => $password,
+					'user_pass'   => $password,
 					'target_site' => $site['url'],
 					'source_site' => $this->get_site_url(),
 				)
@@ -441,7 +442,7 @@ class Sync extends Base {
 				continue;
 			}
 
-			$remote_user             = $response['user'] ?? null;
+			$remote_user = $response['user'] ?? null;
 			if ( empty( $remote_user ) ) {
 				$this->write_log(
 					array(
@@ -460,8 +461,8 @@ class Sync extends Base {
 			}
 
 
-			$remote_user['password'] = $password;
-			$local_user = $this->create_user( $remote_user );
+			$remote_user['user_pass'] = $password;
+			$local_user               = $this->create_user( $remote_user );
 
 			if ( is_wp_error( $local_user ) ) {
 				$this->write_log(
@@ -525,7 +526,7 @@ class Sync extends Base {
 	 * Sync a user's password hash to remote sites.
 	 *
 	 * @param int|WP_User $user User ID or user object.
-	 * @param string      $password Password hash.
+	 * @param string $password Password hash.
 	 *
 	 * @return array Results per site.
 	 */
@@ -544,8 +545,8 @@ class Sync extends Base {
 			$response = $this->send_request(
 				$this->endpoint( $site, 'sync-password' ),
 				array(
-					'user_email'    => $user->user_email,
-					'password' => $password,
+					'user_email' => $user->user_email,
+					'user_pass'  => $password,
 				)
 			);
 
