@@ -158,10 +158,22 @@ trait SyncHelper {
 	 */
 	public function apply_roles( int $user_id, array $roles ): void {
 		$wp_user = new WP_User( $user_id );
-		$wp_user->set_role( '' );
-		foreach ( $roles as $role ) {
-			$role = sanitize_key( $role );
-			$wp_user->add_role( $role );
+
+		$valid_roles = array_intersect(
+			array_map( 'sanitize_key', $roles ),
+			$this->get_roles()
+		);
+
+		$role = reset( $valid_roles );
+
+		if ( $role && get_role( $role ) ) {
+			$wp_user->set_role( $role );
+		} elseif ( empty( $wp_user->roles ) ) {
+			$default_role = get_option( 'default_role', 'subscriber' );
+
+			if ( get_role( $default_role ) ) {
+				$wp_user->set_role( $default_role );
+			}
 		}
 	}
 
