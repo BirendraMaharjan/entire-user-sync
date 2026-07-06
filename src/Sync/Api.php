@@ -300,7 +300,7 @@ class Api {
 	public function handle_sync_password( WP_REST_Request $request ): WP_REST_Response {
 		$data     = $request->get_json_params();
 		$email    = sanitize_email( $data['user_email'] ?? '' );
-		$password = sanitize_text_field( $data['user_password'] ?? '' );
+		$password = sanitize_text_field( $data['user_pass'] ?? '' );
 
 		if ( ! $email || ! $password ) {
 			return new WP_REST_Response( array( 'message' => 'Missing email or password.' ), 400 );
