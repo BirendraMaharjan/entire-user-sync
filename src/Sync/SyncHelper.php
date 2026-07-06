@@ -99,7 +99,7 @@ trait SyncHelper {
 	 *
 	 * @param array $data Remote user payload.
 	 *
-	 * @return WP_Error Local WP_User instance or WP_Error on failure.
+	 * @return false|WP_Error|WP_User Local WP_User instance or WP_Error on failure.
 	 */
 	public function create_user( array $data ) {
 
@@ -126,16 +126,19 @@ trait SyncHelper {
 			$username = sanitize_text_field( $data['user_login'] ?? '' );
 
 			$user_data['user_pass']  = wp_generate_password();
+
 			$user_data['user_login'] = $this->build_user_login( $username, $email );
 			$user_id                    = wp_insert_user( $user_data );
 		}
 
-		if ( is_wp_error( $user_id ) ) {
-			return $user_id;
+		$user = get_user_by( 'id', $user_id );
+
+		if ( is_wp_error( $user ) ) {
+			return $user;
 		}
 
 		if ( ! empty( $data['roles'] ) && is_array( $data['roles'] ) ) {
-			$this->apply_roles( $user_id, $data['roles'], $this->get_roles() );
+			$this->apply_roles( $user_id, $data['roles'] );
 		}
 
 		if ( ! empty( $data['meta'] ) && is_array( $data['meta'] ) ) {
@@ -144,7 +147,7 @@ trait SyncHelper {
 
 		update_user_meta( $user_id, '_entireus_imported_from', sanitize_text_field( $data['site_url'] ?? '' ) );
 
-		return $user_id;
+		return $user;
 	}
 
 	/**

@@ -21,10 +21,14 @@ class Api {
 
 	use SyncHelper;
 
+	private Sync $sync;
+
 	/**
 	 * Api constructor.
 	 */
 	public function __construct() {
+		$this->sync = new Sync();
+
 		$this->init();
 	}
 
@@ -180,11 +184,19 @@ class Api {
 			return new WP_REST_Response( array( 'message' => 'Missing credentials.' ), 400 );
 		}
 
-		$user = wp_authenticate( $username, $password );
+		$user = get_user_by( 'login', $username );
 
-		if ( is_wp_error( $user ) ) {
+		if ( ! $user ) {
+			$user = get_user_by( 'email', $username );
+		}
 
-			return new WP_REST_Response( array( 'message' => 'Invalid credentials.' ), 401 );
+		if ( ! $user || ! wp_check_password( $password, $user->user_pass, $user->ID ) ) {
+			return new WP_REST_Response(
+				array(
+					'message' => 'Invalid credentials.',
+				),
+				401
+			);
 		}
 
 		$meta_keys = $this->get_meta_keys();

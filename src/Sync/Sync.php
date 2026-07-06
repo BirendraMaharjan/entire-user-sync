@@ -11,6 +11,7 @@ namespace EntireUserSync\Sync;
 
 use EntireUserSync\Common\Abstracts\Base;
 use EntireUserSync\Common\Traits\Requester;
+use WP_Error;
 use WP_User;
 
 /**
@@ -143,10 +144,8 @@ class Sync extends Base {
 	 * @param string $endpoint URL to call.
 	 * @param array $data Data to send.
 	 * @param string $method HTTP method.
-	 *
-	 * @return array Response summary.
 	 */
-	public function send_request( string $endpoint, array $data, string $method = 'POST' ): array {
+	public function send_request( string $endpoint, array $data, string $method = 'POST' ) {
 		$body      = wp_json_encode( $data );
 		$signature = hash_hmac( 'sha256', $body, $this->get_secret() );
 
@@ -166,27 +165,39 @@ class Sync extends Base {
 		);
 
 		if ( is_wp_error( $response ) ) {
-			return array(
-				'status'   => 'error',
-				'data'     => $data,
-				'message'  => $response->get_error_message(),
-				'endpoint' => $endpoint,
-				'request'  => $data,
+			return $response;
+		}
+
+		$code = wp_remote_retrieve_response_code( $response );
+		$body = wp_remote_retrieve_body( $response );
+		$data = json_decode( $body, true );
+
+
+		if ( JSON_ERROR_NONE !== json_last_error() ) {
+			return new WP_Error(
+				'entireus_invalid_json',
+				'Invalid JSON response from remote site.',
+				array(
+					'code'     => $code,
+					'body'     => $body,
+					'endpoint' => $endpoint,
+				)
 			);
 		}
 
-		$code          = wp_remote_retrieve_response_code( $response );
-		$response_body = wp_remote_retrieve_body( $response );
-		$decoded_body  = json_decode( $response_body, true );
+		if ( $code < 200 || $code >= 300 ) {
+			return new WP_Error(
+				'entireus_remote_error',
+				$data['message'] ?? sprintf( 'Remote request failed (%d).', $code ),
+				array(
+					'code'     => $code,
+					'data'     => $data,
+					'endpoint' => $endpoint,
+				)
+			);
+		}
 
-		return array(
-			'status'   => ( $code >= 200 && $code < 300 ) ? 'success' : 'error',
-			'code'     => $code,
-			'data'     => $decoded_body,
-			'message'  => $decoded_body['message'] ?? '',
-			'endpoint' => $endpoint,
-			'request'  => $data,
-		);
+		return $data;
 	}
 
 	/**
@@ -363,6 +374,7 @@ class Sync extends Base {
 			);
 
 			if ( is_wp_error( $response ) || empty( $response ) ) {
+
 				continue;
 			}
 
