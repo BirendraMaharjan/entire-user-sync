@@ -166,8 +166,13 @@ trait SyncHelper {
 
 		$role = reset( $valid_roles );
 
-		if ( $role && get_role( $role ) ) {
-			$wp_user->set_role( $role );
+		if ( $role && ( get_role( $role ) || $role === 'none' ) ) {
+			if( $role === 'none' ) {
+				$wp_user->set_role( '' );
+			} else{
+				$wp_user->set_role( $role );
+			}
+
 		} elseif ( empty( $wp_user->roles ) ) {
 			$default_role = get_option( 'default_role', 'subscriber' );
 

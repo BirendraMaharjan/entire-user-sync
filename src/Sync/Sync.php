@@ -116,6 +116,10 @@ class Sync extends Base {
 			return false;
 		}
 
+		if ( empty( $user->roles ) ) {
+			$user->roles = array( 'none' );
+		}
+
 		if ( empty( $this->get_roles() ) || ! array_intersect( $user->roles, $this->get_roles() ) ) {
 			$this->write_log(
 				array(
@@ -270,7 +274,7 @@ class Sync extends Base {
 			'display_name' => $user->display_name,
 			'user_url'     => $user->user_url,
 			'description'  => $user->description,
-			'roles'        => $user->roles,
+			'roles'        => empty( $user->roles ) ? array('none') : $user->roles,
 			'source_site'  => $this->get_site_url(),
 			'target_site'  => $site['url'],
 			'hook'         => current_filter()

@@ -147,6 +147,7 @@ class Configuration {
 		$roles   = wp_roles()->roles;
 		$options = array();
 
+		$options['none'] = esc_html__( '&mdash; No role for this site &mdash;', 'entire-user-sync' );
 		foreach ( $roles as $slug => $role ) {
 			$options[ $slug ] = translate_user_role( $role['name'] );
 		}
