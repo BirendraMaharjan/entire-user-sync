@@ -93,10 +93,6 @@ class Sync extends Base {
 			return false;
 		}
 
-		if ( ! defined( 'ENTIREUS_INCOMING_SYNC' ) ) {
-			define( 'ENTIREUS_INCOMING_SYNC', true );
-		}
-
 		$user = get_userdata( $user_id );
 		if ( ! $user ) {
 			$this->write_log(

@@ -54,7 +54,7 @@ class Api {
 					'methods'  => WP_REST_Server::CREATABLE,
 					'callback' => array( $this, 'handle_get_user' ),
 				)
-			),
+			)
 		);
 
 		register_rest_route(
@@ -150,15 +150,17 @@ class Api {
 
 		$source_site = $request->get_header( 'X-EntireUS-Site' );
 
-		$this->write_log( array(
-			'event'       => 'auth',
-			'direction'   => 'incoming',
-			'status'      => 'error',
-			'message'     => $message,
-			'source_site' => esc_url_raw( $source_site ),
-			'target_site' => esc_url_raw( $this->get_site_url() ),
-			'payload'     => wp_unslash( $request->get_json_params() ),
-		) );
+		$this->write_log(
+			array(
+				'event'       => 'auth',
+				'direction'   => 'incoming',
+				'status'      => 'error',
+				'message'     => $message,
+				'source_site' => esc_url_raw( $source_site ),
+				'target_site' => esc_url_raw( $this->get_site_url() ),
+				'payload'     => wp_unslash( $request->get_json_params() ),
+			)
+		);
 
 		return new WP_Error(
 			'entireus_forbidden',
@@ -293,7 +295,7 @@ class Api {
 	public function handle_sync_password( WP_REST_Request $request ): WP_REST_Response {
 		$data     = $request->get_json_params();
 		$email    = sanitize_email( $data['user_email'] ?? '' );
-		$password = $data['password'] ?? '';
+		$password = sanitize_text_field( $data['password'] ?? '' );
 
 		if ( ! $email || ! $password ) {
 			return new WP_REST_Response( array( 'message' => 'Missing email or password.' ), 400 );
@@ -305,7 +307,7 @@ class Api {
 			return new WP_REST_Response( array( 'message' => 'User not found.' ), 404 );
 		}
 
-		wp_set_password( $data['password'], $user->ID );
+		wp_set_password( $password, $user->ID );
 
 		$this->write_log(
 			array(
