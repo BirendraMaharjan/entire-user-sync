@@ -125,10 +125,8 @@ trait SyncHelper {
 		} else {
 			$username = sanitize_text_field( $data['user_login'] ?? '' );
 
-			$user_data['user_pass']  = wp_generate_password();
-
 			$user_data['user_login'] = $this->build_user_login( $username, $email );
-			$user_id                    = wp_insert_user( $user_data );
+			$user_id                 = wp_insert_user( $user_data );
 		}
 
 		$user = get_user_by( 'id', $user_id );
@@ -285,6 +283,10 @@ trait SyncHelper {
 		if ( ! $this->enable_logging() ) {
 			return;
 		}
+
+		error_log( wp_debug_backtrace_summary() );
+		error_log( current_filter() );
+
 		$this->logger()->log( $args );
 	}
 }

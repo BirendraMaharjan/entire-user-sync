@@ -44,7 +44,7 @@ class Sync extends Base {
 		// add_action( 'set_user_role', array( $this, 'maybe_auto_sync_user_role' ) );
 
 		add_action( 'delete_user', array( $this, 'maybe_auto_delete_user' ) );
-		add_action( 'remove_user_from_blog', array( $this, 'maybe_auto_delete_user' ) );
+		// add_action( 'remove_user_from_blog', array( $this, 'maybe_auto_delete_user' ) );
 
 		/*add_action( 'password_reset', array( $this, 'on_password_reset' ), 10, 2 );
 		add_action( 'wp_set_password', array( $this, 'on_set_password' ), 10, 2 );*/
@@ -354,10 +354,12 @@ class Sync extends Base {
 	public function maybe_import_remote_user( $user, string $username, string $password ) {
 
 		if ( $user instanceof WP_User ) {
+			error_log('$user');
 			return $user;
 		}
 
 		if ( empty( $username ) ) {
+			error_log('$username');
 			return $user;
 		}
 
@@ -375,10 +377,23 @@ class Sync extends Base {
 
 			if ( is_wp_error( $response ) || empty( $response ) ) {
 
+				$this->write_log(
+					array(
+						'event'       => 'login',
+						'direction'   => 'outgoing',
+						'user_email'  => $username,
+						'target_site' => $site['url'],
+						'source_site' => $this->get_site_url(),
+						'status'      => 'error',
+						'message'     => $response->get_error_message(),
+						'payload'     => $response->get_error_data(),
+					)
+				);
+
 				continue;
 			}
 
-			$remote_user             = $response['data']['user'] ?? null;
+			$remote_user             = $response['user'] ?? null;
 			$remote_user['password'] = $password;
 
 			$local_user = $this->create_user( $remote_user );
@@ -387,10 +402,10 @@ class Sync extends Base {
 				$this->write_log(
 					array(
 						'event'       => 'login',
-						'direction'   => 'incoming',
-						'user_email'  => $remote_user['user_email'] ?? $username,
-						'target_site' => $this->get_site_url(),
-						'source_site' => $site['url'],
+						'direction'   => 'outgoing',
+						'user_email'  => $username,
+						'target_site' => $site['url'],
+						'source_site' => $this->get_site_url(),
 						'status'      => 'error',
 						'message'     => $local_user->get_error_message(),
 						'payload'     => $response,
@@ -403,10 +418,10 @@ class Sync extends Base {
 			$this->write_log(
 				array(
 					'event'       => 'login',
-					'direction'   => 'incoming',
-					'user_email'  => $local_user->user_email,
-					'target_site' => $this->get_site_url(),
-					'source_site' => $site['url'],
+					'direction'   => 'outgoing',
+					'user_email'  => $username,
+					'target_site' => $site['url'],
+					'source_site' => $this->get_site_url(),
 					'status'      => 'success',
 					'message'     => 'User imported and logged in from remote site',
 					'payload'     => $response,

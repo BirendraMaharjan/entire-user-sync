@@ -27,7 +27,6 @@ class Api {
 	 * Api constructor.
 	 */
 	public function __construct() {
-		$this->sync = new Sync();
 
 		$this->init();
 	}
@@ -219,7 +218,6 @@ class Api {
 					'roles'         => $user->roles,
 					'meta'          => $meta,
 					'site_url'      => get_site_url(),
-					'password_hash' => $user->user_pass,
 				),
 			),
 			200
