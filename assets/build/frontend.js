@@ -12,6 +12,16 @@ __webpack_require__.r(__webpack_exports__);
 // extracted by mini-css-extract-plugin
 
 
+/***/ },
+
+/***/ "@wordpress/i18n"
+/*!******************************!*\
+  !*** external ["wp","i18n"] ***!
+  \******************************/
+(module) {
+
+module.exports = window["wp"]["i18n"];
+
 /***/ }
 
 /******/ 	});
@@ -47,6 +57,35 @@ __webpack_require__.r(__webpack_exports__);
 /******/ 	}
 /******/ 	
 /************************************************************************/
+/******/ 	/* webpack/runtime/compat get default export */
+/******/ 	(() => {
+/******/ 		// getDefaultExport function for compatibility with non-harmony modules
+/******/ 		__webpack_require__.n = (module) => {
+/******/ 			var getter = module && module.__esModule ?
+/******/ 				() => (module['default']) :
+/******/ 				() => (module);
+/******/ 			__webpack_require__.d(getter, { a: getter });
+/******/ 			return getter;
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__webpack_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
+/******/ 	
 /******/ 	/* webpack/runtime/make namespace object */
 /******/ 	(() => {
 /******/ 		// define __esModule on exports
@@ -66,16 +105,16 @@ var __webpack_exports__ = {};
   !*** ./assets/src/js/frontend.js ***!
   \***********************************/
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _scss_frontend_scss__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../scss/frontend.scss */ "./assets/src/scss/frontend.scss");
+/* harmony import */ var _wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @wordpress/i18n */ "@wordpress/i18n");
+/* harmony import */ var _wordpress_i18n__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _scss_frontend_scss__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../scss/frontend.scss */ "./assets/src/scss/frontend.scss");
 /**
  * VI Account Manager Scripts
  *
  * @package EntireAccountManager
  * @since   1.0.0
  */
-const {
-  __
-} = wp.i18n;
+
 
 (function ($) {
   'use strict';
@@ -318,20 +357,20 @@ const {
       e.preventDefault();
       const $button = $(this);
       const email = $button.data('email');
-      $button.prop('disabled', true).text(__('Sending...', 'entire-account-manager'));
+      $button.prop('disabled', true).text((0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Sending...', 'entire-account-manager'));
       Utils.ajax('entire_resend_verification', {
         email
       }).then(response => {
         if (response?.success) {
           Popup.show(response.data.message, 'success');
-          $button.text(__('Email Sent!', 'entire-account-manager'));
+          $button.text((0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Email Sent!', 'entire-account-manager'));
         } else {
           Popup.show(response?.data?.message, 'error');
-          $button.prop('disabled', false).text(__('Resend Verification Email', 'entire-account-manager'));
+          $button.prop('disabled', false).text((0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Resend Verification Email', 'entire-account-manager'));
         }
       }).catch(() => {
-        Popup.show(__('An error occurred. Please try again.', 'entire-account-manager'), 'error');
-        $button.prop('disabled', false).text(__('Resend Verification Email', 'entire-account-manager'));
+        Popup.show((0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('An error occurred. Please try again.', 'entire-account-manager'), 'error');
+        $button.prop('disabled', false).text((0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Resend Verification Email', 'entire-account-manager'));
       });
     }
   };
@@ -370,16 +409,16 @@ const {
           data: formData
         });
         if (response?.success) {
-          FormSubmission._showMessage($msg, response.data?.message || __('Success!', 'entire-account-manager'), 'success');
+          FormSubmission._showMessage($msg, response.data?.message || (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Success!', 'entire-account-manager'), 'success');
           $form[0].reset();
           $(SEL.PASSWORD_STRENGTH_BAR).attr('data-strength', '0');
         } else if (response?.data?.errors) {
           FormSubmission._applyFieldErrors($form, $msg, response.data.errors);
         } else {
-          FormSubmission._showMessage($msg, response?.data?.message || __('An unexpected error occurred.', 'entire-account-manager'), 'error');
+          FormSubmission._showMessage($msg, response?.data?.message || (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('An unexpected error occurred.', 'entire-account-manager'), 'error');
         }
       } catch (err) {
-        FormSubmission._showMessage($msg, __('An error occurred. Please try again.', 'entire-account-manager'), 'error');
+        FormSubmission._showMessage($msg, (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('An error occurred. Please try again.', 'entire-account-manager'), 'error');
       } finally {
         FormSubmission._setLoading($container, $button, false);
         Utils.scrollTo($container.find(`${SEL.MESSAGE}, ${SEL.ERROR}`).first());

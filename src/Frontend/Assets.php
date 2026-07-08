@@ -50,7 +50,7 @@ class Assets extends Base {
 		wp_enqueue_script(
 			$this->plugin->slug(),
 			$this->plugin->url() . '/assets/build/frontend.js',
-			array(),
+			array( 'wp-i18n' ),
 			$this->plugin->version(),
 			true
 		);
