@@ -241,6 +241,28 @@ class Sync extends Base {
 	}
 
 	/**
+	 * Build a safe user_login string from remote payload or email.
+	 *
+	 * @param string $username
+	 * @param string $email Sanitized user email.
+	 *
+	 * @return string
+	 */
+	public function build_user_login( string $username, string $email ): string {
+		// Prefer remote user_login when provided; fall back to the local part of the email.
+		$user_login = sanitize_user( $username );
+		if ( empty( $user_login ) ) {
+			$user_login = sanitize_user( strstr( $email, '@', true ) );
+		}
+
+		if ( username_exists( $user_login ) ) {
+			$user_login .= '_' . substr( md5( $email ), 0, 5 );
+		}
+
+		return $user_login;
+	}
+
+	/**
 	 * Create or update a local user from remote payload.
 	 *
 	 * @param array $data Remote user payload.

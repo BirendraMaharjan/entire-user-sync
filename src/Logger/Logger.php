@@ -196,7 +196,7 @@ class Logger {
 	 * @param array $data Passed by reference and modified in-place.
 	 */
 	private static function strip_sensitive( array &$data ): void {
-		$blocked = array( 'password_hash', 'user_pass', 'password', 'pass' );
+		$blocked = array( 'user_pass', 'password' );
 		foreach ( $blocked as $key ) {
 			if ( isset( $data[ $key ] ) ) {
 				$data[ $key ] = '[redacted]';
@@ -207,6 +207,14 @@ class Logger {
 			foreach ( $blocked as $key ) {
 				if ( isset( $data['meta'][ $key ] ) ) {
 					$data['meta'][ $key ] = '[redacted]';
+				}
+			}
+		}
+
+		if ( isset( $data['user']['data'] ) && is_array( $data['user']['data'] ) ) {
+			foreach ( $blocked as $key ) {
+				if ( isset( $data['user']['data'][ $key ] ) ) {
+					$data['user']['data'][ $key ] = '[redacted]';
 				}
 			}
 		}
