@@ -739,6 +739,10 @@ class Sync extends Base {
 	 * @param string $new_pass New password.
 	 */
 	public function on_password_reset( \WP_User $user, string $new_pass ): void {
+		if ( ! $this->allow_sync( $user->ID ) ) {
+			return;
+		}
+
 		$this->sync_password( $user, $new_pass );
 	}
 
