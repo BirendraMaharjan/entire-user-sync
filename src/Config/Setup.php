@@ -9,7 +9,7 @@
 namespace EntireUserSync\Config;
 
 use EntireUserSync\Common\Traits\Singleton;
-use EntireUserSync\Sync\Logger;
+use EntireUserSync\Logger\Logger;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

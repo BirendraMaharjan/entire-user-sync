@@ -8,7 +8,7 @@
 defined( 'ABSPATH' ) || exit;
 
 if ( ! isset( $entireus_log_page ) ) {
-	$entireus_log_page = new \EntireUserSync\Sync\LogPage();
+	$entireus_log_page = new \EntireUserSync\Logger\LogPage();
 }
 
 if ( ! isset( $entireus_view ) ) {

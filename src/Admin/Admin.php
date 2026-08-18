@@ -10,7 +10,6 @@ namespace EntireUserSync\Admin;
 
 use EntireUserSync\Admin\Settings\Settings;
 use EntireUserSync\Common\Abstracts\Base;
-use EntireUserSync\Sync\LogPage;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

@@ -10,7 +10,7 @@ namespace EntireUserSync\Admin\Settings\Sections;
 /**
  * Legacy back-compatibility section provider.
  */
-class Back {
+class Backup {
 
 	/**
 	 * Get the legacy section configuration.

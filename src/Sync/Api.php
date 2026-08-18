@@ -13,21 +13,17 @@ use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
 use WP_REST_Server;
-use WP_User;
 
 /**
  * Class Api
  */
-class Api {
-
-	use SyncHelper;
+class Api  extends Sync {
 
 	/**
 	 * Api constructor.
 	 */
 	public function __construct() {
-
-		$this->init();
+		parent::__construct();
 	}
 
 	/**

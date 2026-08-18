@@ -9,8 +9,10 @@
 
 namespace EntireUserSync\Sync;
 
+use EntireUserSync\Admin\Settings\Settings;
 use EntireUserSync\Common\Abstracts\Base;
 use EntireUserSync\Common\Traits\Requester;
+use EntireUserSync\Logger\Logger;
 use WP_Error;
 use WP_User;
 
@@ -20,9 +22,24 @@ use WP_User;
  * Coordinates sync triggers, inbound authentication and user creation.
  */
 class Sync extends Base {
-
-	use SyncHelper;
+	/**
+	 * Requester.
+	 */
 	use Requester;
+
+	/**
+	 * Settings instance (overrideable for tests).
+	 *
+	 * @var Settings|null
+	 */
+	private ?Settings $settings_instance = null;
+
+	/**
+	 * Logger instance (created on demand).
+	 *
+	 * @var Logger|null
+	 */
+	private ?Logger $logger_instance = null;
 
 	/**
 	 * Sync constructor.
@@ -51,6 +68,91 @@ class Sync extends Base {
 
 		add_filter( 'authenticate', array( $this, 'maybe_import_remote_user' ), 20, 3 );
 		// add_action( 'wp_login', array( $this, 'on_local_login' ), 10, 2 );
+	}
+
+	/**
+	 * Return the Settings singleton for this plugin.
+	 */
+	private function settings(): Settings {
+		if ( $this->settings_instance === null ) {
+			$this->settings_instance = new Settings();
+		}
+		return $this->settings_instance;
+	}
+
+	/**
+	 * Get secret key for remote signing.
+	 */
+	public function get_secret(): string {
+		return $this->settings()->get( 'integrations', 'secret_key' ) ?? ENTIREUS_SECURITY_KEY;
+	}
+
+	/**
+	 * Whether automatic outbound sync is enabled.
+	 */
+	public function auto_sync(): bool {
+		return (bool) $this->settings()->get( 'setup', 'sync_enable' );
+	}
+
+	/**
+	 * Return configured sites.
+	 *
+	 * @return array<int,array>
+	 */
+	public function get_sites(): array {
+		return $this->settings()->get( 'setup', 'sites' ) ?? array();
+	}
+
+	/**
+	 * Return only active sites.
+	 *
+	 * @return array<int,array>
+	 */
+	public function get_active_sites(): array {
+		$sites = $this->get_sites();
+
+		return array_values(
+			array_filter(
+				$sites,
+				function ( $site ) {
+					return isset( $site['active'] ) && '1' === $site['active'];
+				}
+			)
+		);
+	}
+
+	public function is_allowed_site( string $site_url ): bool {
+		$active_sites = $this->get_active_sites();
+
+		return in_array( $site_url, array_column( $active_sites, 'url' ), true );
+	}
+
+	/**
+	 * Return the current site url.
+	 */
+	public function get_site_url(): string {
+		return get_site_url();
+	}
+
+	/**
+	 * Return the route namespace.
+	 */
+	public function get_route_namespace(): string {
+		return 'entireus/v1';
+	}
+
+	/**
+	 * Return configured roles allowed for syncing.
+	 */
+	public function get_roles(): array {
+		return $this->settings()->get( 'configuration', 'roles' ) ?? array();
+	}
+
+	/**
+	 * Return configured meta keys to include in payloads.
+	 */
+	public function get_meta_keys(): array {
+		return $this->settings()->get( 'configuration', 'sync_meta_keys' ) ?? array();
 	}
 
 	/**
@@ -136,6 +238,112 @@ class Sync extends Base {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Create or update a local user from remote payload.
+	 *
+	 * @param array $data Remote user payload.
+	 *
+	 * @return false|WP_Error|WP_User Local WP_User instance or WP_Error on failure.
+	 */
+	public function create_user( array $data ) {
+
+		$email = sanitize_email( $data['user_email'] ?? '' );
+		if ( ! $email ) {
+			return new WP_Error( 'entireus_bad_email', 'Remote user has no email' );
+		}
+
+		$user_data = array(
+			'user_email'   => $email,
+			'first_name'   => sanitize_text_field( $data['first_name'] ?? '' ),
+			'last_name'    => sanitize_text_field( $data['last_name'] ?? '' ),
+			'display_name' => sanitize_text_field( $data['display_name'] ?? '' ),
+			'user_url'     => esc_url_raw( $data['user_url'] ?? '' ),
+			'description'  => sanitize_textarea_field( $data['description'] ?? '' ),
+			'user_pass'    => sanitize_text_field( $data['user_pass'] ?? '' ),
+		);
+
+		$existing = get_user_by( 'email', $email );
+		if ( $existing ) {
+			$user_data['ID'] = $existing->ID;
+			$user_id         = wp_update_user( $user_data );
+		} else {
+			$username = sanitize_text_field( $data['user_login'] ?? '' );
+
+			$user_data['user_login'] = $this->build_user_login( $username, $email );
+			$user_id                 = wp_insert_user( $user_data );
+		}
+
+		$user = get_user_by( 'id', $user_id );
+
+		if ( is_wp_error( $user ) ) {
+			return $user;
+		}
+
+		if ( ! empty( $data['roles'] ) && is_array( $data['roles'] ) ) {
+			$this->apply_roles( $user_id, $data['roles'] );
+		}
+
+		if ( ! empty( $data['meta'] ) && is_array( $data['meta'] ) ) {
+			$this->apply_meta( $user_id, $data['meta'] );
+		}
+
+		update_user_meta( $user_id, '_entireus_imported_from', sanitize_text_field( $data['site_url'] ?? '' ) );
+
+		return $user;
+	}
+
+	/**
+	 * Apply roles to a WP_User instance, filtering by allowed list.
+	 *
+	 * @param int $user_id User ID to modify.
+	 * @param array $roles Roles from remote payload.
+	 *
+	 * @return void
+	 */
+	public function apply_roles( int $user_id, array $roles ): void {
+		$wp_user = new WP_User( $user_id );
+
+		$valid_roles = array_intersect(
+			array_map( 'sanitize_key', $roles ),
+			$this->get_roles()
+		);
+
+		$role = reset( $valid_roles );
+
+		if ( $role && ( get_role( $role ) || $role === 'none' ) ) {
+			if( $role === 'none' ) {
+				$wp_user->set_role( '' );
+			} else{
+				$wp_user->set_role( $role );
+			}
+
+		} elseif ( empty( $wp_user->roles ) ) {
+			$default_role = get_option( 'default_role', 'subscriber' );
+
+			if ( get_role( $default_role ) ) {
+				$wp_user->set_role( $default_role );
+			}
+		}
+	}
+
+	/**
+	 * Apply user meta from remote payload respecting allowed meta keys.
+	 *
+	 * @param int $user_id User ID to update.
+	 * @param array $meta Meta array from remote.
+	 *
+	 * @return void
+	 */
+	public function apply_meta( int $user_id, array $meta ): void {
+		$allowed_meta_keys       = $this->get_meta_keys();
+		foreach ( $meta as $key => $value ) {
+			$key = sanitize_key( $key );
+			if ( empty( $allowed_meta_keys ) || in_array( $key, $allowed_meta_keys, true ) ) {
+				update_user_meta( $user_id, $key, $value );
+			}
+		}
 	}
 
 	/**
@@ -584,5 +792,23 @@ class Sync extends Base {
 		}
 
 		return $results;
+	}
+
+	/**
+	 * Write a log if logging is enabled.
+	 *
+	 * @param array $args Log arguments.
+	 */
+	public function write_log( array $args ): void {
+		if ( ! $this->settings()->get( 'configuration', 'enable_log' ) ) {
+			return;
+		}
+
+		/*error_log( wp_debug_backtrace_summary() );
+		error_log( current_filter() );*/
+
+		$logger = new Logger();
+
+		$logger->log( $args );
 	}
 }

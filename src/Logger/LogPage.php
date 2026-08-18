@@ -7,7 +7,7 @@
  * @package EntireUserSync
  */
 
-namespace EntireUserSync\Sync;
+namespace EntireUserSync\Logger;
 
 use EntireUserSync\Common\Abstracts\Base;
 

@@ -11,7 +11,7 @@ namespace EntireUserSync\Admin;
 
 use EntireUserSync\Admin\Settings\Settings;
 use EntireUserSync\Common\Abstracts\Base;
-use EntireUserSync\Sync\LogPage;
+use EntireUserSync\Logger\LogPage;
 
 /**
  * Registers admin menus and dispatches page rendering.

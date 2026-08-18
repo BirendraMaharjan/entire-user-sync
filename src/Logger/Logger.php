@@ -8,16 +8,14 @@
  * @package EntireUserSync\Sync
  */
 
-namespace EntireUserSync\Sync;
+namespace EntireUserSync\Logger;
 
 /**
  * Class Logger
  */
 class Logger {
 
-	use SyncHelper;
-
-	public const TABLE = 'entireus_logs';
+	public const string TABLE = 'entireus_logs';
 
 	/**
 	 * Write a log entry.
@@ -146,7 +144,12 @@ class Logger {
 		$table_name = $wpdb->prefix . self::TABLE;
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table_name is built from $wpdb->prefix and internal constant.
-		return (int) $wpdb->query( $wpdb->prepare( "DELETE FROM `{$table_name}` WHERE created_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL %d DAY)", $days ) );
+		return (int) $wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM `{$table_name}` WHERE created_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL %d DAY)",
+				$days
+			)
+		);
 	}
 
 	/**

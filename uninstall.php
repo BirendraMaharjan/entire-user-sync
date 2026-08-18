@@ -75,6 +75,4 @@ foreach ( $entireus_transients as $entireus_transient ) {
 // Autoloader must be loaded before using any plugin classes.
 require_once plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
 
-use EntireUserSync\Sync\Logger;
-
 // Custom table cleanup is intentionally disabled on uninstall.
