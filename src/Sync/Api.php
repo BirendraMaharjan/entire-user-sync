@@ -204,7 +204,16 @@ class Api  extends Sync {
 			$user = get_user_by( 'email', $username );
 		}
 
-		$this->verify_allow_sync( $user );
+		if ( ! $this->allow_sync( $user->ID ) ) {
+			error_log( 'User does not have the required role for sync.' );
+			return new WP_REST_Response(
+				array(
+					'message' => 'User does not have the required role for sync.',
+					'user_role' => $user->roles,
+				),
+				401
+			);
+		}
 
 		if ( ! $user || ! wp_check_password( $password, $user->user_pass, $user->ID ) ) {
 			return new WP_REST_Response(
@@ -322,6 +331,17 @@ class Api  extends Sync {
 			return new WP_REST_Response( array( 'message' => 'User not found.' ), 404 );
 		}
 
+		if ( ! $this->allow_sync( $user->ID ) ) {
+			error_log( 'User does not have the required role for sync.' );
+			return new WP_REST_Response(
+				array(
+					'message' => 'User does not have the required role for sync.',
+					'user_role' => $user->roles,
+				),
+				401
+			);
+		}
+
 		wp_set_password( $password, $user->ID );
 
 		$this->write_log(
@@ -365,6 +385,17 @@ class Api  extends Sync {
 		$user = get_user_by( 'email', $email );
 		if ( ! $user ) {
 			return new WP_REST_Response( array( 'message' => 'User not found.' ), 404 );
+		}
+
+		if ( ! $this->allow_sync( $user->ID ) ) {
+			error_log( 'User does not have the required role for sync.' );
+			return new WP_REST_Response(
+				array(
+					'message' => 'User does not have the required role for sync.',
+					'user_role' => $user->roles,
+				),
+				401
+			);
 		}
 
 		require_once ABSPATH . 'wp-admin/includes/user.php';
