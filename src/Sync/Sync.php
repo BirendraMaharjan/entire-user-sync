@@ -221,12 +221,14 @@ class Sync extends Base {
 		if ( empty( $this->get_roles() ) || ! array_intersect( $user->roles, $this->get_roles() ) ) {
 			$this->write_log(
 				array(
-					'event'      => 'sync',
-					'direction'  => 'outgoing',
-					'user_email' => $user->user_email,
-					'status'     => 'error',
-					'message'    => 'User does not have the required role.',
-					'payload'    => array(
+					'event'       => 'sync',
+					'direction'   => 'outgoing',
+					'user_email'  => $user->user_email,
+					'status'      => 'error',
+					'target_site' => '',
+					'source_site' => $this->get_site_url(),
+					'message'     => 'User does not have the required role for sync.',
+					'payload'     => array(
 						'hook'       => current_filter(),
 						'user_email' => $user->user_email
 					),
@@ -282,8 +284,7 @@ class Sync extends Base {
 			'last_name'    => sanitize_text_field( $data['last_name'] ?? '' ),
 			'display_name' => sanitize_text_field( $data['display_name'] ?? '' ),
 			'user_url'     => esc_url_raw( $data['user_url'] ?? '' ),
-			'description'  => sanitize_textarea_field( $data['description'] ?? '' ),
-			'user_pass'    => sanitize_text_field( $data['user_pass'] ?? '' ),
+			'description'  => sanitize_textarea_field( $data['description'] ?? '' )
 		);
 
 		$existing = get_user_by( 'email', $email );
@@ -294,6 +295,7 @@ class Sync extends Base {
 			$username = sanitize_text_field( $data['user_login'] ?? '' );
 
 			$user_data['user_login'] = $this->build_user_login( $username, $email );
+			$user_data['user_pass'] = sanitize_text_field( $data['user_pass'] ?? '' );
 			$user_id                 = wp_insert_user( $user_data );
 		}
 
@@ -775,8 +777,10 @@ class Sync extends Base {
 			$response = $this->send_request(
 				$this->endpoint( $site, 'sync-password' ),
 				array(
-					'user_email' => $user->user_email,
-					'user_pass'  => $password,
+					'user_email'  => $user->user_email,
+					'user_pass'   => $password,
+					'target_site' => $site['url'],
+					'source_site' => $this->get_site_url(),
 				)
 			);
 
