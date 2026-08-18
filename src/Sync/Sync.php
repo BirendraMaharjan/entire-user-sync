@@ -834,9 +834,6 @@ class Sync extends Base {
 			return;
 		}
 
-		/*error_log( wp_debug_backtrace_summary() );
-		error_log( current_filter() );*/
-
 		$logger = new Logger();
 
 		$logger->log( $args );
