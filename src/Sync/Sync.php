@@ -54,20 +54,14 @@ class Sync extends Base {
 	 * Register hooks for sync operations.
 	 */
 	public function init(): void {
-
 		add_action( 'user_register', array( $this, 'maybe_auto_sync_user' ) );
 		add_action( 'profile_update', array( $this, 'maybe_auto_sync_user' ) );
 
-		// add_action( 'set_user_role', array( $this, 'maybe_auto_sync_user_role' ) );
-
 		add_action( 'delete_user', array( $this, 'maybe_auto_delete_user' ) );
-		// add_action( 'remove_user_from_blog', array( $this, 'maybe_auto_delete_user' ) );
 
 		add_action( 'password_reset', array( $this, 'on_password_reset' ), 10, 2 );
-		/*add_action( 'wp_set_password', array( $this, 'on_set_password' ), 10, 2 );*/
 
 		add_filter( 'authenticate', array( $this, 'maybe_import_remote_user' ), 20, 3 );
-		// add_action( 'wp_login', array( $this, 'on_local_login' ), 10, 2 );
 	}
 
 	/**
@@ -121,6 +115,13 @@ class Sync extends Base {
 		);
 	}
 
+	/**
+	 * Check if a site URL is in the active sites list.
+	 *
+	 * @param string $site_url Site URL to check.
+	 *
+	 * @return bool True if allowed, false otherwise.
+	 */
 	public function is_allowed_site( string $site_url ): bool {
 		$active_sites = $this->get_active_sites();
 
@@ -245,8 +246,8 @@ class Sync extends Base {
 	/**
 	 * Build a safe user_login string from remote payload or email.
 	 *
-	 * @param string $username
-	 * @param string $email Sanitized user email.
+	 * @param string $username user username.
+	 * @param string $email user email.
 	 *
 	 * @return string
 	 */
@@ -532,7 +533,7 @@ class Sync extends Base {
 			'last_name'    => $user->last_name,
 			'display_name' => $user->display_name,
 			'user_url'     => $user->user_url,
-			'user_pass'    => $_POST['password'] ?? $user->user_pass,
+			'user_pass'    => $user->user_pass,
 			'description'  => $user->description,
 			'roles'        => empty( $user->roles ) ? array( 'none' ) : $user->roles,
 			'source_site'  => $this->get_site_url(),

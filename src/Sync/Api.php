@@ -20,13 +20,6 @@ use WP_REST_Server;
 class Api extends Sync {
 
 	/**
-	 * Api constructor.
-	 */
-	public function __construct() {
-		parent::__construct();
-	}
-
-	/**
 	 * Register REST hooks on rest_api_init.
 	 */
 	public function init(): void {
@@ -138,18 +131,6 @@ class Api extends Sync {
 		return true;
 	}
 
-	public function verify_allow_sync( $user ) {
-		if ( ! $this->allow_sync( $user->ID ) ) {
-			return new WP_REST_Response(
-				array(
-					'message'   => 'User does not have the required role for sync.',
-					'user_role' => $user->roles,
-				),
-				401
-			);
-		}
-	}
-
 	/**
 	 * Log a failed authentication attempt.
 	 *
@@ -204,7 +185,6 @@ class Api extends Sync {
 		}
 
 		if ( ! $this->allow_sync( $user->ID ) ) {
-			error_log( 'User does not have the required role for sync.' );
 			return new WP_REST_Response(
 				array(
 					'message'   => 'User does not have the required role for sync.',
@@ -331,7 +311,6 @@ class Api extends Sync {
 		}
 
 		if ( ! $this->allow_sync( $user->ID ) ) {
-			error_log( 'User does not have the required role for sync.' );
 			return new WP_REST_Response(
 				array(
 					'message'   => 'User does not have the required role for sync.',
@@ -387,7 +366,6 @@ class Api extends Sync {
 		}
 
 		if ( ! $this->allow_sync( $user->ID ) ) {
-			error_log( 'User does not have the required role for sync.' );
 			return new WP_REST_Response(
 				array(
 					'message'   => 'User does not have the required role for sync.',
