@@ -103,16 +103,16 @@ class Sync extends Base {
 	 * @return array<int,array>
 	 */
 	public function get_active_sites(): array {
-		$sites = $this->get_sites();
+		$sites        = $this->get_sites();
+		$active_sites = array();
 
-		return array_values(
-			array_filter(
-				$sites,
-				function ( $site ) {
-					return isset( $site['active'] ) && '1' === $site['active'];
-				}
-			)
-		);
+		foreach ( $sites as $site ) {
+			if ( isset( $site['active'] ) && '1' === $site['active'] ) {
+				$active_sites[] = $site;
+			}
+		}
+
+		return $active_sites;
 	}
 
 	/**
@@ -123,13 +123,21 @@ class Sync extends Base {
 	 * @return bool True if allowed, false otherwise.
 	 */
 	public function is_allowed_site( string $site_url ): bool {
-		$active_sites = $this->get_active_sites();
+		$site_url = untrailingslashit( $site_url );
 
-		return in_array( $site_url, array_column( $active_sites, 'url' ), true );
+		foreach ( $this->get_active_sites() as $site ) {
+			if ( isset( $site['url'] ) && untrailingslashit( $site['url'] ) === $site_url ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
 	 * Return the current site url.
+	 *
+	 * @return string Current site url.
 	 */
 	public function get_site_url(): string {
 		return get_site_url();
@@ -146,14 +154,18 @@ class Sync extends Base {
 	 * Return configured roles allowed for syncing.
 	 */
 	public function get_roles(): array {
-		return $this->settings()->get( 'configuration', 'roles' ) ?? array();
+		$roles = $this->settings()->get( 'configuration', 'roles' );
+
+		return is_array( $roles ) ? $roles : array();
 	}
 
 	/**
 	 * Return configured meta keys to include in payloads.
 	 */
 	public function get_meta_keys(): array {
-		return $this->settings()->get( 'configuration', 'sync_meta_keys' ) ?? array();
+		$meta_keys = $this->settings()->get( 'configuration', 'sync_meta_keys' );
+
+		return is_array( $meta_keys ) ? $meta_keys : array();
 	}
 
 	/**
@@ -165,7 +177,7 @@ class Sync extends Base {
 	 * @return string Full URL endpoint.
 	 */
 	public function endpoint( array $site, string $route ): string {
-		return trailingslashit( $site['url'] ?? '' ) . 'wp-json/entireus/v1/' . $route;
+		return trailingslashit( $site['url'] ?? '' ) . 'wp-json/' . $this->get_route_namespace() . '/' . $route;
 	}
 
 	/**
@@ -253,13 +265,18 @@ class Sync extends Base {
 	 */
 	public function build_user_login( string $username, string $email ): string {
 		// Prefer remote user_login when provided; fall back to the local part of the email.
-		$user_login = sanitize_user( $username );
+		$user_login = sanitize_user( $username, true );
+
 		if ( empty( $user_login ) ) {
-			$user_login = sanitize_user( strstr( $email, '@', true ) );
+			$user_login = sanitize_user( strstr( $email, '@', true ), true );
 		}
 
-		if ( username_exists( $user_login ) ) {
-			$user_login .= '_' . substr( md5( $email ), 0, 5 );
+		$base_login = $user_login;
+		$suffix     = 1;
+
+		while ( username_exists( $user_login ) ) {
+			$user_login = $base_login . '_' . $suffix;
+			++$suffix;
 		}
 
 		return $user_login;
@@ -296,14 +313,20 @@ class Sync extends Base {
 			$username = sanitize_text_field( $data['user_login'] ?? '' );
 
 			$user_data['user_login'] = $this->build_user_login( $username, $email );
-			$user_data['user_pass']  = sanitize_text_field( $data['user_pass'] ?? '' );
+			$user_data['user_pass']  = $data['user_pass'] ?? '';
 			$user_id                 = wp_insert_user( $user_data );
 		}
 
-		$user = get_user_by( 'id', $user_id );
+		if ( is_wp_error( $user_id ) ) {
+			return $user_id;
+		}
 
-		if ( is_wp_error( $user ) ) {
-			return $user;
+		$user = get_user_by( 'id', $user_id );
+		if ( ! $user instanceof WP_User ) {
+			return new WP_Error(
+				'entireus_user_not_found',
+				'Unable to retrieve the created user.'
+			);
 		}
 
 		if ( ! empty( $data['roles'] ) && is_array( $data['roles'] ) ) {
@@ -656,7 +679,7 @@ class Sync extends Base {
 				)
 			);
 
-			if ( is_wp_error( $response ) || empty( $response ) ) {
+			if ( is_wp_error( $response ) ) {
 
 				$this->write_log(
 					array(
