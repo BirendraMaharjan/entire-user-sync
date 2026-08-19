@@ -17,7 +17,7 @@ use WP_REST_Server;
 /**
  * Class Api
  */
-class Api  extends Sync {
+class Api extends Sync {
 
 	/**
 	 * Api constructor.
@@ -105,7 +105,6 @@ class Api  extends Sync {
 		$timestamp   = absint( $request->get_header( 'X-EntireUS-Timestamp' ) );
 		$body        = $request->get_body();
 
-
 		// 1. allowlist.
 		if ( ! $this->is_allowed_site( $source_site ) ) {
 			return $this->fail_auth( $request, 'Unauthorized site: ' . $source_site );
@@ -143,7 +142,7 @@ class Api  extends Sync {
 		if ( ! $this->allow_sync( $user->ID ) ) {
 			return new WP_REST_Response(
 				array(
-					'message' => 'User does not have the required role for sync.',
+					'message'   => 'User does not have the required role for sync.',
 					'user_role' => $user->roles,
 				),
 				401
@@ -155,7 +154,7 @@ class Api  extends Sync {
 	 * Log a failed authentication attempt.
 	 *
 	 * @param WP_REST_Request $request REST request.
-	 * @param string $message Failure message.
+	 * @param string          $message Failure message.
 	 *
 	 * @return WP_Error
 	 */
@@ -208,7 +207,7 @@ class Api  extends Sync {
 			error_log( 'User does not have the required role for sync.' );
 			return new WP_REST_Response(
 				array(
-					'message' => 'User does not have the required role for sync.',
+					'message'   => 'User does not have the required role for sync.',
 					'user_role' => $user->roles,
 				),
 				401
@@ -335,7 +334,7 @@ class Api  extends Sync {
 			error_log( 'User does not have the required role for sync.' );
 			return new WP_REST_Response(
 				array(
-					'message' => 'User does not have the required role for sync.',
+					'message'   => 'User does not have the required role for sync.',
 					'user_role' => $user->roles,
 				),
 				401
@@ -391,7 +390,7 @@ class Api  extends Sync {
 			error_log( 'User does not have the required role for sync.' );
 			return new WP_REST_Response(
 				array(
-					'message' => 'User does not have the required role for sync.',
+					'message'   => 'User does not have the required role for sync.',
 					'user_role' => $user->roles,
 				),
 				401

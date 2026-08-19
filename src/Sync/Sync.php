@@ -158,7 +158,7 @@ class Sync extends Base {
 	/**
 	 * Build a full REST endpoint for a site.
 	 *
-	 * @param array $site Site config.
+	 * @param array  $site Site config.
 	 * @param string $route Route name.
 	 *
 	 * @return string Full URL endpoint.
@@ -206,7 +206,7 @@ class Sync extends Base {
 					'message'    => 'User does not exist.',
 					'payload'    => array(
 						'hook'    => current_filter(),
-						'user_id' => $user_id
+						'user_id' => $user_id,
 					),
 				)
 			);
@@ -230,7 +230,7 @@ class Sync extends Base {
 					'message'     => 'User does not have the required role for sync.',
 					'payload'     => array(
 						'hook'       => current_filter(),
-						'user_email' => $user->user_email
+						'user_email' => $user->user_email,
 					),
 
 				)
@@ -284,7 +284,7 @@ class Sync extends Base {
 			'last_name'    => sanitize_text_field( $data['last_name'] ?? '' ),
 			'display_name' => sanitize_text_field( $data['display_name'] ?? '' ),
 			'user_url'     => esc_url_raw( $data['user_url'] ?? '' ),
-			'description'  => sanitize_textarea_field( $data['description'] ?? '' )
+			'description'  => sanitize_textarea_field( $data['description'] ?? '' ),
 		);
 
 		$existing = get_user_by( 'email', $email );
@@ -295,7 +295,7 @@ class Sync extends Base {
 			$username = sanitize_text_field( $data['user_login'] ?? '' );
 
 			$user_data['user_login'] = $this->build_user_login( $username, $email );
-			$user_data['user_pass'] = sanitize_text_field( $data['user_pass'] ?? '' );
+			$user_data['user_pass']  = sanitize_text_field( $data['user_pass'] ?? '' );
 			$user_id                 = wp_insert_user( $user_data );
 		}
 
@@ -321,7 +321,7 @@ class Sync extends Base {
 	/**
 	 * Apply roles to a WP_User instance, filtering by allowed list.
 	 *
-	 * @param int $user_id User ID to modify.
+	 * @param int   $user_id User ID to modify.
 	 * @param array $roles Roles from remote payload.
 	 *
 	 * @return void
@@ -337,12 +337,11 @@ class Sync extends Base {
 		$role = reset( $valid_roles );
 
 		if ( $role && ( get_role( $role ) || $role === 'none' ) ) {
-			if( $role === 'none' ) {
+			if ( $role === 'none' ) {
 				$wp_user->set_role( '' );
-			} else{
+			} else {
 				$wp_user->set_role( $role );
 			}
-
 		} elseif ( empty( $wp_user->roles ) ) {
 			$default_role = get_option( 'default_role', 'subscriber' );
 
@@ -355,13 +354,13 @@ class Sync extends Base {
 	/**
 	 * Apply user meta from remote payload respecting allowed meta keys.
 	 *
-	 * @param int $user_id User ID to update.
+	 * @param int   $user_id User ID to update.
 	 * @param array $meta Meta array from remote.
 	 *
 	 * @return void
 	 */
 	public function apply_meta( int $user_id, array $meta ): void {
-		$allowed_meta_keys       = $this->get_meta_keys();
+		$allowed_meta_keys = $this->get_meta_keys();
 		foreach ( $meta as $key => $value ) {
 			$key = sanitize_key( $key );
 			if ( empty( $allowed_meta_keys ) || in_array( $key, $allowed_meta_keys, true ) ) {
@@ -374,7 +373,7 @@ class Sync extends Base {
 	 * Send a signed HTTP request to an endpoint.
 	 *
 	 * @param string $endpoint URL to call.
-	 * @param array $data Data to send.
+	 * @param array  $data Data to send.
 	 * @param string $method HTTP method.
 	 *
 	 * @return array|WP_Error
@@ -521,7 +520,7 @@ class Sync extends Base {
 	 * Build the outgoing payload for a user.
 	 *
 	 * @param WP_User $user User object.
-	 * @param array $site Site config.
+	 * @param array   $site Site config.
 	 *
 	 * @return array Payload array.
 	 */
@@ -538,7 +537,7 @@ class Sync extends Base {
 			'roles'        => empty( $user->roles ) ? array( 'none' ) : $user->roles,
 			'source_site'  => $this->get_site_url(),
 			'target_site'  => $site['url'],
-			'hook'         => current_filter()
+			'hook'         => current_filter(),
 		);
 
 		$meta_keys       = $this->get_meta_keys();
@@ -584,7 +583,7 @@ class Sync extends Base {
 				array(
 					'email'       => $email,
 					'target_site' => $site['url'],
-					'source_site' => $this->get_site_url()
+					'source_site' => $this->get_site_url(),
 				),
 				'DELETE'
 			);
@@ -629,8 +628,8 @@ class Sync extends Base {
 	 * Attempt to authenticate by checking remote sites for the user.
 	 *
 	 * @param WP_User|WP_Error|null $user Authenticated user, WP_Error or null.
-	 * @param string $username Username.
-	 * @param string $password Password.
+	 * @param string                $username Username.
+	 * @param string                $password Password.
 	 *
 	 * @return WP_User|WP_Error|null
 	 */
@@ -692,7 +691,6 @@ class Sync extends Base {
 				continue;
 			}
 
-
 			$remote_user['user_pass'] = $password;
 			$local_user               = $this->create_user( $remote_user );
 
@@ -736,7 +734,7 @@ class Sync extends Base {
 	 * Handle password reset event.
 	 *
 	 * @param \WP_User $user User object.
-	 * @param string $new_pass New password.
+	 * @param string   $new_pass New password.
 	 */
 	public function on_password_reset( \WP_User $user, string $new_pass ): void {
 		if ( ! $this->allow_sync( $user->ID ) ) {
@@ -750,7 +748,7 @@ class Sync extends Base {
 	 * Handle low-level set password action.
 	 *
 	 * @param string $password New password.
-	 * @param int $user_id User ID.
+	 * @param int    $user_id User ID.
 	 */
 	public function on_set_password( string $password, int $user_id ): void {
 		if ( $user_id ) {
@@ -762,7 +760,7 @@ class Sync extends Base {
 	 * Sync a user's password hash to remote sites.
 	 *
 	 * @param int|WP_User $user User ID or user object.
-	 * @param string $password Password hash.
+	 * @param string      $password Password hash.
 	 *
 	 * @return array Results per site.
 	 */
