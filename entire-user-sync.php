@@ -1,15 +1,13 @@
 <?php
 /**
  * Plugin Name:       Entire User Sync
- * Plugin URI:        https://github.com/BirendraMaharjan/vi-account-manager
+ * Plugin URI:        https://github.com/BirendraMaharjan/entire-user-sync
  * Description:       User sync for WordPress.
  * Version:           1.0.0
  * Author:            Birendra Maharjan
  * Author URI:        https://www.linkedin.com/in/birendramaharjan/
  * Text Domain:       entire-user-sync
  * Domain Path:       /languages
- * License:           GPL v2 or later
- * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
  *
  * @package EntireUserSync
  * @author  Birendra Maharjan

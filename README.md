@@ -32,10 +32,6 @@ npm run build
 vendor/bin/phpcs --standard=phpcs.xml.dist --extensions=php src/
 ```
 
-- Tests: PHPUnit is available in `vendor/bin/phpunit`. Run tests from the plugin root.
-
-- Static analysis: optionally run `vendor/bin/phpstan` if present.
-
 ## Internationalization
 - Textdomain: `entire-user-sync`.
 - POT file: `languages/entire-user-sync.pot`.
@@ -47,14 +43,10 @@ vendor/bin/phpcs --standard=phpcs.xml.dist --extensions=php src/
 ## Contributing
 - Follow the coding standards in `phpcs.xml.dist`.
 - Add PHPDoc for all public classes and methods.
-- Add unit tests for new features and include changelog entries.
 
 ## Changelog
-- See `CHANGELOG.md` (create if not present). For releases, follow semantic versioning.
+- See `readme.txt`
 
 ## License
 This plugin is licensed under GPLv2 or later. See the `LICENSE` file in the repo.
-
----
-If you want, I can also generate/update `readme.txt` (WordPress.org format) and run PHPCS to show style issues. You already asked me to start with docs; the `readme.txt` next will be created.
 
