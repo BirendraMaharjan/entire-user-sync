@@ -123,11 +123,6 @@ class Api extends Sync {
 			return $this->fail_auth( $request, 'Invalid signature' );
 		}
 
-		// Mark this request as an incoming sync.
-		if ( ! defined( 'ENTIREUS_INCOMING_SYNC' ) ) {
-			define( 'ENTIREUS_INCOMING_SYNC', true );
-		}
-
 		return true;
 	}
 

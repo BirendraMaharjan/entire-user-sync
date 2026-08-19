@@ -204,7 +204,7 @@ class Sync extends Base {
 	 */
 	public function allow_sync( int $user_id ): bool {
 
-		if ( defined( 'ENTIREUS_INCOMING_SYNC' ) || ! $this->auto_sync() ) {
+		if ( ! $this->auto_sync() ) {
 			return false;
 		}
 
@@ -475,10 +475,6 @@ class Sync extends Base {
 
 		if ( ! $this->allow_sync( $user_id ) ) {
 			return;
-		}
-
-		if ( ! defined( 'ENTIREUS_INCOMING_SYNC' ) ) {
-			define( 'ENTIREUS_INCOMING_SYNC', true );
 		}
 
 		$this->sync_user( $user_id );
