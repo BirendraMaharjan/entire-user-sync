@@ -300,7 +300,7 @@ class Sync extends Base {
 
 		$email = sanitize_email( $data['user_email'] ?? '' );
 		if ( ! $email ) {
-			return new WP_Error( 'entireus_bad_email', 'Remote user has no email' );
+			return new WP_Error( 'entireus_bad_email', 'Remote user has no email.' );
 		}
 
 		$user_data = array(
@@ -312,6 +312,10 @@ class Sync extends Base {
 			'description'  => sanitize_textarea_field( $data['description'] ?? '' ),
 		);
 
+		if ( ! empty( $data['user_pass'] ) ) {
+			$user_data['user_pass'] = $data['user_pass'];
+		}
+
 		$existing = get_user_by( 'email', $email );
 		if ( $existing ) {
 			$user_data['ID'] = $existing->ID;
@@ -320,7 +324,6 @@ class Sync extends Base {
 			$username = sanitize_text_field( $data['user_login'] ?? '' );
 
 			$user_data['user_login'] = $this->build_user_login( $username, $email );
-			$user_data['user_pass']  = $data['user_pass'] ?? '';
 			$user_id                 = wp_insert_user( $user_data );
 		}
 
