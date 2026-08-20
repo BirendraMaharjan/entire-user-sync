@@ -698,19 +698,20 @@ class Sync extends Base {
 		}
 
 		foreach ( $this->get_active_sites() as $site ) {
-
+			$payload = array(
+				'username'    => $username,
+				'user_pass'   => $password,
+				'roles'        => empty( $user->roles ) ? array( 'none' ) : $user->roles,
+				'source_site'  => $this->get_site_url(),
+				'target_site'  => $site['url'],
+				'hook'         => current_filter(),
+			);
 			$response = $this->send_request(
 				$this->endpoint( $site, 'get-user' ),
-				array(
-					'username'    => $username,
-					'user_pass'   => $password,
-					'target_site' => $site['url'],
-					'source_site' => $this->get_site_url(),
-				)
+				$payload
 			);
 
 			if ( is_wp_error( $response ) ) {
-
 				$this->write_log(
 					array(
 						'event'       => 'login',
@@ -720,7 +721,10 @@ class Sync extends Base {
 						'source_site' => $this->get_site_url(),
 						'status'      => 'error',
 						'message'     => $response->get_error_message(),
-						'payload'     => $response->get_error_data(),
+						'payload'     => array(
+							'payload'  => $payload,
+							'response' => $response,
+						),
 					)
 				);
 
@@ -738,7 +742,10 @@ class Sync extends Base {
 						'source_site' => $this->get_site_url(),
 						'status'      => 'error',
 						'message'     => 'No user found on remote site.',
-						'payload'     => $response,
+						'payload'     => array(
+							'payload'  => $payload,
+							'response' => $response,
+						),
 					)
 				);
 
@@ -764,7 +771,10 @@ class Sync extends Base {
 						'source_site' => $this->get_site_url(),
 						'status'      => 'error',
 						'message'     => $local_user->get_error_message(),
-						'payload'     => $response,
+						'payload'     => array(
+							'payload'  => $payload,
+							'response' => $response,
+						),
 					)
 				);
 
@@ -779,8 +789,11 @@ class Sync extends Base {
 					'target_site' => $site['url'],
 					'source_site' => $this->get_site_url(),
 					'status'      => 'success',
-					'message'     => 'User imported and logged in from remote site',
-					'payload'     => $response,
+					'message'     => 'User imported and logged in from remote site.',
+					'payload'     => array(
+						'payload'  => $payload,
+						'response' => $response,
+					),
 				)
 			);
 
