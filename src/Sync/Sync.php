@@ -608,7 +608,7 @@ class Sync extends Base {
 		if ( ! $user ) {
 			return;
 		}
-		$this->delete_user( $user->user_email );
+		$this->delete_user( $user );
 	}
 
 	/**
@@ -618,18 +618,20 @@ class Sync extends Base {
 	 *
 	 * @return array Results per site.
 	 */
-	public function delete_user( string $email ): array {
+	public function delete_user( WP_User $user ): array {
 		$results = array();
 
+		$email = sanitize_email( $user->user_email );
 		foreach ( $this->get_active_sites() as $site ) {
-
+			$payload = array(
+				'email'       => $email,
+				'roles'       => empty( $user->roles ) ? array( 'none' ) : $user->roles,
+				'target_site' => $site['url'],
+				'source_site' => $this->get_site_url(),
+			);
 			$response = $this->send_request(
 				$this->endpoint( $site, 'delete-user' ),
-				array(
-					'email'       => $email,
-					'target_site' => $site['url'],
-					'source_site' => $this->get_site_url(),
-				),
+				$payload,
 				'DELETE'
 			);
 
@@ -641,11 +643,15 @@ class Sync extends Base {
 						'event'       => 'delete',
 						'direction'   => 'outgoing',
 						'user_email'  => $email,
+						'roles'       => empty( $user->roles ) ? array( 'none' ) : $user->roles,
 						'source_site' => $this->get_site_url(),
 						'target_site' => $site['url'],
 						'status'      => 'error',
 						'message'     => $response->get_error_message(),
-						'payload'     => $response->get_error_data(),
+						'payload'     => array(
+							'payload'  => $payload,
+							'response' => $response,
+						),
 					)
 				);
 
@@ -661,7 +667,10 @@ class Sync extends Base {
 					'target_site' => $site['url'],
 					'status'      => 'success',
 					'message'     => $response['message'] ?? '',
-					'payload'     => $response,
+					'payload'     => array(
+						'payload'  => $payload,
+						'response' => $response,
+					),
 				)
 			);
 		}
