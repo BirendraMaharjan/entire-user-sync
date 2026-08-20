@@ -242,7 +242,13 @@ class Api extends Sync {
 
 		$email      = sanitize_email( $data['user_email'] );
 		$existing   = get_user_by( 'email', $email );
-		$local_user = $this->create_user( $data );
+
+		self::$is_syncing = true;
+		try {
+			$local_user = $this->create_user( $data );
+		} finally {
+			self::$is_syncing = false;
+		}
 
 		$event = $existing ? 'update' : 'create';
 		if ( is_wp_error( $local_user ) ) {
