@@ -172,6 +172,16 @@ class Settings extends Base {
 			$type  = $field['type'] ?? 'text';
 			$value = $input[ $field_key ] ?? null;
 
+			// Special case: if the field is a repeater of sites, sanitize each site's URL to remove trailing slashes. From: Setup > Target Sites.
+			if ( 'sites' === $field_key && is_array( $value ) ) {
+				foreach ( $value as &$site ) {
+					if ( isset( $site['url'] ) ) {
+						$site['url'] = untrailingslashit( esc_url_raw( $site['url'] ) );
+					}
+				}
+				unset( $site );
+			}
+
 			$sanitized[ $field_key ] = $this->sanitize_field( $value, $type, $field );
 		}
 
