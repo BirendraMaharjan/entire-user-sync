@@ -28,18 +28,20 @@ class Sync extends Base {
 	use Requester;
 
 	/**
-	 * Settings instance (overrideable for tests).
+	 * Whether the current operation is caused by an incoming sync.
+	 *
+	 * Prevents remote changes from triggering another outbound sync.
+	 *
+	 * @var bool
+	 */
+	protected static bool $is_syncing = false;
+
+	/**
+	 * Settings instance.
 	 *
 	 * @var Settings|null
 	 */
 	private ?Settings $settings_instance = null;
-
-	/**
-	 * Logger instance (created on demand).
-	 *
-	 * @var Logger|null
-	 */
-	private ?Logger $logger_instance = null;
 
 	/**
 	 * Sync constructor.
@@ -56,12 +58,16 @@ class Sync extends Base {
 	public function init(): void {
 		add_action( 'user_register', array( $this, 'maybe_auto_sync_user' ) );
 		add_action( 'profile_update', array( $this, 'maybe_auto_sync_user' ) );
+		// add_action( 'set_user_role', array( $this, 'maybe_auto_sync_user_role' ) );
 
 		add_action( 'delete_user', array( $this, 'maybe_auto_delete_user' ) );
+		// add_action( 'remove_user_from_blog', array( $this, 'maybe_auto_delete_user' ) );
 
-		add_action( 'password_reset', array( $this, 'on_password_reset' ), 10, 2 );
+		// add_action( 'password_reset', array( $this, 'on_password_reset' ), 10, 2 );
+		add_action( 'wp_set_password', array( $this, 'on_set_password' ), 10, 2 );
 
 		add_filter( 'authenticate', array( $this, 'maybe_import_remote_user' ), 20, 3 );
+		// add_action( 'wp_login', array( $this, 'on_local_login' ), 10, 2 );
 	}
 
 	/**
@@ -473,6 +479,10 @@ class Sync extends Base {
 	 */
 	public function maybe_auto_sync_user( int $user_id ): void {
 
+		if ( self::$is_syncing ) {
+			return;
+		}
+
 		if ( ! $this->allow_sync( $user_id ) ) {
 			return;
 		}
@@ -576,9 +586,14 @@ class Sync extends Base {
 	 */
 	public function maybe_auto_delete_user( int $user_id ): void {
 
+		if ( self::$is_syncing ) {
+			return;
+		}
+
 		if ( ! $this->allow_sync( $user_id ) ) {
 			return;
 		}
+
 		$user = get_userdata( $user_id );
 		if ( ! $user ) {
 			return;
@@ -712,7 +727,13 @@ class Sync extends Base {
 			}
 
 			$remote_user['user_pass'] = $password;
-			$local_user               = $this->create_user( $remote_user );
+			self::$is_syncing = true;
+
+			try {
+				$local_user = $this->create_user( $remote_user );
+			} finally {
+				self::$is_syncing = false;
+			}
 
 			if ( is_wp_error( $local_user ) ) {
 				$this->write_log(
@@ -757,6 +778,9 @@ class Sync extends Base {
 	 * @param string   $new_pass New password.
 	 */
 	public function on_password_reset( \WP_User $user, string $new_pass ): void {
+		if ( self::$is_syncing ) {
+			return;
+		}
 		if ( ! $this->allow_sync( $user->ID ) ) {
 			return;
 		}
@@ -771,6 +795,12 @@ class Sync extends Base {
 	 * @param int    $user_id User ID.
 	 */
 	public function on_set_password( string $password, int $user_id ): void {
+		if ( self::$is_syncing ) {
+			return;
+		}
+		if ( ! $this->allow_sync( $user_id ) ) {
+			return;
+		}
 		if ( $user_id ) {
 			$this->sync_password( $user_id, $password );
 		}
