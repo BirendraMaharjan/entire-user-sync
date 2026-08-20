@@ -129,10 +129,11 @@ class Sync extends Base {
 	 * @return bool True if allowed, false otherwise.
 	 */
 	public function is_allowed_site( string $site_url ): bool {
-		$site_url = untrailingslashit( $site_url );
-
 		foreach ( $this->get_active_sites() as $site ) {
-			if ( isset( $site['url'] ) && untrailingslashit( $site['url'] ) === $site_url ) {
+			if (
+				isset( $site['url'] ) &&
+				untrailingslashit( $site['url'] ) === untrailingslashit( $site_url )
+			) {
 				return true;
 			}
 		}
@@ -522,7 +523,10 @@ class Sync extends Base {
 						'source_site' => $this->get_site_url(),
 						'status'      => 'error',
 						'message'     => $response->get_error_message(),
-						'payload'     => $response->get_error_data(),
+						'payload'     => array(
+							'payload'  => $request_payload,
+							'response' => $response,
+						),
 					)
 				);
 
@@ -538,7 +542,10 @@ class Sync extends Base {
 					'source_site' => $this->get_site_url(),
 					'status'      => 'success',
 					'message'     => $response['message'] ?? '',
-					'payload'     => $response,
+					'payload'     => array(
+						'payload'  => $request_payload,
+						'response' => $response,
+					),
 				)
 			);
 		}
@@ -562,13 +569,16 @@ class Sync extends Base {
 			'last_name'    => $user->last_name,
 			'display_name' => $user->display_name,
 			'user_url'     => $user->user_url,
-			'user_pass'    => $user->user_pass,
 			'description'  => $user->description,
 			'roles'        => empty( $user->roles ) ? array( 'none' ) : $user->roles,
 			'source_site'  => $this->get_site_url(),
 			'target_site'  => $site['url'],
 			'hook'         => current_filter(),
 		);
+
+		if ( ! empty( $_POST['pass1'] ) ) {
+			$payload['user_pass'] = $_POST['pass1'];
+		}
 
 		$meta_keys       = $this->get_meta_keys();
 		$payload['meta'] = array();
@@ -826,14 +836,18 @@ class Sync extends Base {
 		}
 
 		foreach ( $this->get_active_sites() as $site ) {
+			$payload = array(
+				'user_email'  => $user->user_email,
+				'user_pass'   => $password,
+				'roles'        => empty( $user->roles ) ? array( 'none' ) : $user->roles,
+				'target_site' => $site['url'],
+				'source_site' => $this->get_site_url(),
+				'hook'        => current_filter(),
+			);
+
 			$response = $this->send_request(
 				$this->endpoint( $site, 'sync-password' ),
-				array(
-					'user_email'  => $user->user_email,
-					'user_pass'   => $password,
-					'target_site' => $site['url'],
-					'source_site' => $this->get_site_url(),
-				)
+				$payload
 			);
 
 			$results[ $this->site_key( $site ) ] = $response;
@@ -848,7 +862,10 @@ class Sync extends Base {
 						'source_site' => $this->get_site_url(),
 						'status'      => 'error',
 						'message'     => $response->get_error_message(),
-						'payload'     => $response->get_error_data(),
+						'payload'     => array(
+							'payload'  => $payload,
+							'response' => $response,
+						),
 					)
 				);
 
@@ -864,7 +881,10 @@ class Sync extends Base {
 					'source_site' => $this->get_site_url(),
 					'status'      => 'success',
 					'message'     => $response['message'] ?? '',
-					'payload'     => $response,
+					'payload'     => array(
+						'payload'  => $payload,
+						'response' => $response,
+					),
 				)
 			);
 		}
