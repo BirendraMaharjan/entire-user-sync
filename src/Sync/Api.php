@@ -98,22 +98,22 @@ class Api extends Sync {
 		$timestamp   = absint( $request->get_header( 'X-EntireUS-Timestamp' ) );
 		$body        = $request->get_body();
 
-		// 1. allowlist.
+		// 1. Allowlist.
 		if ( ! $this->is_allowed_site( $source_site ) ) {
 			return $this->fail_auth( $request, 'Unauthorized site: ' . $source_site );
 		}
 
-		// 2. missing headers.
+		// 2. Missing headers.
 		if ( ! $secret || ! $signature ) {
 			return $this->fail_auth( $request, 'Missing auth headers' );
 		}
 
-		// 3. replay protection (5-min window).
+		// 3. Replay protection (5-min window).
 		if ( ! $timestamp || abs( time() - $timestamp ) > 300 ) {
 			return $this->fail_auth( $request, 'Request expired' );
 		}
 
-		// 4. signature check.
+		// 4. Signature check.
 		$valid = hash_equals(
 			hash_hmac( 'sha256', $body, $secret ),
 			$signature
@@ -158,7 +158,9 @@ class Api extends Sync {
 	}
 
 	/**
-	 * Handle get-user endpoint. Authenticate then return limited user info.
+	 * Handle get-user endpoint.
+	 *
+	 * Authenticate then return limited user info.
 	 *
 	 * @param WP_REST_Request $request REST request.
 	 *
@@ -179,20 +181,20 @@ class Api extends Sync {
 			$user = get_user_by( 'email', $username );
 		}
 
-		if ( ! $this->allow_sync( $user->ID ) ) {
+		if ( ! $user || ! wp_check_password( $password, $user->user_pass, $user->ID ) ) {
 			return new WP_REST_Response(
 				array(
-					'message'   => 'User does not have the required role for sync.',
-					'user_role' => $user->roles,
+					'message' => 'Invalid credentials.',
 				),
 				401
 			);
 		}
 
-		if ( ! $user || ! wp_check_password( $password, $user->user_pass, $user->ID ) ) {
+		if ( ! $this->allow_sync( $user->ID ) ) {
 			return new WP_REST_Response(
 				array(
-					'message' => 'Invalid credentials.',
+					'message'   => 'User does not have the required role for sync.',
+					'user_role' => $user->roles,
 				),
 				401
 			);
@@ -315,7 +317,12 @@ class Api extends Sync {
 			);
 		}
 
-		wp_set_password( $password, $user->ID );
+		self::$is_syncing = true;
+		try {
+			wp_set_password( $password, $user->ID );
+		} finally {
+			self::$is_syncing = false;
+		}
 
 		$this->write_log(
 			array(
@@ -371,7 +378,13 @@ class Api extends Sync {
 		}
 
 		require_once ABSPATH . 'wp-admin/includes/user.php';
-		$deleted = wp_delete_user( $user->ID );
+		self::$is_syncing = true;
+
+		try {
+			$deleted = wp_delete_user( $user->ID );
+		} finally {
+			self::$is_syncing = false;
+		}
 
 		$this->write_log(
 			array(
