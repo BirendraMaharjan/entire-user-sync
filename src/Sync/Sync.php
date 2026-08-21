@@ -74,21 +74,28 @@ class Sync extends Base {
 	 * Return the Settings singleton for this plugin.
 	 */
 	private function settings(): Settings {
-		if ( $this->settings_instance === null ) {
+		if ( null === $this->settings_instance ) {
 			$this->settings_instance = new Settings();
 		}
+
 		return $this->settings_instance;
 	}
 
 	/**
 	 * Get secret key for remote signing.
+	 *
+	 * @return string Secret key.
 	 */
 	public function get_secret(): string {
-		return $this->settings()->get( 'integrations', 'secret_key' ) ?? ENTIREUS_SECURITY_KEY;
+		$secret = $this->settings()->get( 'integrations', 'secret_key' );
+
+		return is_string( $secret ) && '' !== $secret ? $secret : ENTIREUS_SECURITY_KEY;
 	}
 
 	/**
 	 * Whether automatic outbound sync is enabled.
+	 *
+	 * @return bool True if enabled.
 	 */
 	public function auto_sync(): bool {
 		return (bool) $this->settings()->get( 'setup', 'sync_enable' );
@@ -97,23 +104,28 @@ class Sync extends Base {
 	/**
 	 * Return configured sites.
 	 *
-	 * @return array<int,array>
+	 * @return array<int,array<string,mixed>> Configured sites.
 	 */
 	public function get_sites(): array {
-		return $this->settings()->get( 'setup', 'sites' ) ?? array();
+		$sites = $this->settings()->get( 'setup', 'sites' );
+
+		return is_array( $sites ) ? $sites : array();
 	}
 
 	/**
 	 * Return only active sites.
 	 *
-	 * @return array<int,array>
+	 * @return array<int,array<string,mixed>> Active sites.
 	 */
 	public function get_active_sites(): array {
-		$sites        = $this->get_sites();
 		$active_sites = array();
 
-		foreach ( $sites as $site ) {
-			if ( isset( $site['active'] ) && '1' === $site['active'] ) {
+		foreach ( $this->get_sites() as $site ) {
+			if (
+				is_array( $site ) &&
+				! empty( $site['url'] ) &&
+				! empty( $site['active'] )
+			) {
 				$active_sites[] = $site;
 			}
 		}
@@ -126,14 +138,21 @@ class Sync extends Base {
 	 *
 	 * @param string $site_url Site URL to check.
 	 *
-	 * @return bool True if allowed, false otherwise.
+	 * @return bool True if allowed.
 	 */
 	public function is_allowed_site( string $site_url ): bool {
+		$site_url = untrailingslashit( esc_url_raw( $site_url ) );
+
+		if ( '' === $site_url ) {
+			return false;
+		}
+
 		foreach ( $this->get_active_sites() as $site ) {
-			if (
-				isset( $site['url'] ) &&
-				untrailingslashit( $site['url'] ) === untrailingslashit( $site_url )
-			) {
+			$configured_url = isset( $site['url'] ) ?
+				untrailingslashit( esc_url_raw( $site['url'] ) ) :
+				'';
+
+			if ( $configured_url === $site_url ) {
 				return true;
 			}
 		}
@@ -152,6 +171,8 @@ class Sync extends Base {
 
 	/**
 	 * Return the route namespace.
+	 *
+	 * @return string REST route namespace.
 	 */
 	public function get_route_namespace(): string {
 		return 'entireus/v1';
@@ -159,47 +180,99 @@ class Sync extends Base {
 
 	/**
 	 * Return configured roles allowed for syncing.
+	 *
+	 * @return array<int,string> Allowed roles.
 	 */
 	public function get_roles(): array {
 		$roles = $this->settings()->get( 'configuration', 'roles' );
 
-		return is_array( $roles ) ? $roles : array();
+		if ( ! is_array( $roles ) ) {
+			return array();
+		}
+
+		return array_values(
+			array_filter(
+				array_map( 'sanitize_key', $roles )
+			)
+		);
 	}
 
 	/**
 	 * Return configured meta keys to include in payloads.
+	 *
+	 * @return array<int,string> Allowed meta keys.
 	 */
 	public function get_meta_keys(): array {
 		$meta_keys = $this->settings()->get( 'configuration', 'sync_meta_keys' );
 
-		return is_array( $meta_keys ) ? $meta_keys : array();
+		if ( ! is_array( $meta_keys ) ) {
+			return array();
+		}
+
+		return array_values(
+			array_filter(
+				array_map( 'sanitize_key', $meta_keys )
+			)
+		);
 	}
 
 	/**
 	 * Build a full REST endpoint for a site.
 	 *
-	 * @param array  $site Site config.
+	 * @param array  $site  Site config.
 	 * @param string $route Route name.
 	 *
 	 * @return string Full URL endpoint.
 	 */
 	public function endpoint( array $site, string $route ): string {
-		return trailingslashit( $site['url'] ?? '' ) . 'wp-json/' . $this->get_route_namespace() . '/' . $route;
+		$site_url = isset( $site['url'] ) ? esc_url_raw( $site['url'] ) : '';
+
+		return trailingslashit( $site_url ) .
+		       'wp-json/' .
+		       trim( $this->get_route_namespace(), '/' ) .
+		       '/' .
+		       ltrim( sanitize_key( $route ), '/' );
 	}
 
 	/**
 	 * Return a human-friendly site key for result indexing.
 	 *
-	 * @param array $site Site config.
+	 * @param array<string,mixed> $site Site config.
 	 *
-	 * @return string Key.
+	 * @return string Site key.
 	 */
 	public function site_key( array $site ): string {
 		if ( ! empty( $site['label'] ) ) {
-			return (string) $site['label'];
+			return sanitize_text_field( $site['label'] );
 		}
 
-		return (string) ( $site['url'] ?? '' );
+		return isset( $site['url'] ) ? esc_url_raw( $site['url'] ) : '';
+	}
+
+	/**
+	 * Check whether a user has an allowed role.
+	 *
+	 * This method is intentionally separate from auto_sync().
+	 * Incoming requests should not depend on whether outbound sync is enabled.
+	 *
+	 * @param int $user_id User ID.
+	 *
+	 * @return bool True if the user has an allowed role.
+	 */
+	public function user_has_allowed_role( int $user_id ): bool {
+		$user = get_userdata( $user_id );
+
+		if ( ! $user instanceof WP_User ) {
+			return false;
+		}
+
+		$allowed_roles = $this->get_roles();
+
+		if ( empty( $allowed_roles ) ) {
+			return false;
+		}
+
+		return ! empty( array_intersect( $user->roles, $allowed_roles ) );
 	}
 
 	/**
@@ -210,26 +283,25 @@ class Sync extends Base {
 	 * @return bool True if allowed, false otherwise.
 	 */
 	public function allow_sync( int $user_id, $target_site = '' ): bool {
-
 		if ( ! $this->auto_sync() ) {
 			return false;
 		}
 
 		$user = get_userdata( $user_id );
-		if ( ! $user ) {
+		if ( ! $user instanceof WP_User ) {
 			$this->write_log(
 				array(
-					'event'      => 'sync',
-					'direction'  => 'outgoing',
-					'user_email' => '',
-					'status'     => 'error',
+					'event'       => 'sync',
+					'direction'   => 'outgoing',
+					'user_email'  => '',
+					'status'      => 'error',
 					'target_site' => $target_site,
 					'source_site' => $this->get_site_url(),
-					'message'    => 'User does not exist.',
-					'payload'    => array(
-						'hook'       => current_filter(),
-						'user_email' => $user->user_email,
-						'user_role'   => $user->roles,
+					'message'     => 'User does not exist.',
+					'payload'     => array(
+						'hook'          => current_filter(),
+						'user_email'    => $user->user_email,
+						'user_role'     => $user->roles,
 						'allowed_roles' => $this->get_roles(),
 					),
 				)
@@ -242,10 +314,7 @@ class Sync extends Base {
 			$user->roles = array( 'none' );
 		}
 
-		if (
-			empty( $this->get_roles() ) ||
-			! array_intersect( $user->roles, $this->get_roles() )
-		) {
+		if ( ! $this->user_has_allowed_role( $user_id ) ) {
 			$this->write_log(
 				array(
 					'event'       => 'sync',
@@ -256,9 +325,9 @@ class Sync extends Base {
 					'source_site' => $this->get_site_url(),
 					'message'     => 'User does not have the required role for sync.',
 					'payload'     => array(
-						'hook'       => current_filter(),
-						'user_email' => $user->user_email,
-						'user_role'   => $user->roles,
+						'hook'          => current_filter(),
+						'user_email'    => $user->user_email,
+						'user_role'     => $user->roles,
 						'allowed_roles' => $this->get_roles(),
 					),
 				)
@@ -273,25 +342,35 @@ class Sync extends Base {
 	/**
 	 * Build a safe user_login string from remote payload or email.
 	 *
-	 * @param string $username user username.
-	 * @param string $email user email.
+	 * @param string $username Remote username.
+	 * @param string $email    User email.
 	 *
-	 * @return string
+	 * @return string User login.
 	 */
 	public function build_user_login( string $username, string $email ): string {
-		// Prefer remote user_login when provided; fall back to the local part of the email.
 		$user_login = sanitize_user( $username, true );
 
-		if ( empty( $user_login ) ) {
-			$user_login = sanitize_user( strstr( $email, '@', true ), true );
+		if ( '' === $user_login ) {
+			$email_local_part = strstr( $email, '@', true );
+
+			$user_login = sanitize_user( $email_local_part, true );
 		}
 
-		$base_login = $user_login;
+		if ( '' === $user_login ) {
+			$user_login = 'user';
+		}
+
+		$base_login = substr( $user_login, 0, 50 );
+		$user_login = $base_login;
 		$suffix     = 1;
 
 		while ( username_exists( $user_login ) ) {
-			$user_login = $base_login . '_' . $suffix;
-			++$suffix;
+			$suffix_text = '_' . $suffix;
+			$max_length  = 60 - strlen( $suffix_text );
+
+			$user_login = substr( $base_login, 0, $max_length ) . $suffix_text;
+
+			++ $suffix;
 		}
 
 		return $user_login;
@@ -300,15 +379,17 @@ class Sync extends Base {
 	/**
 	 * Create or update a local user from remote payload.
 	 *
-	 * @param array $data Remote user payload.
+	 * @param array<string,mixed> $data Remote user payload.
 	 *
-	 * @return false|WP_Error|WP_User Local WP_User instance or WP_Error on failure.
+	 * @return WP_User|WP_Error User instance or error.
 	 */
 	public function create_user( array $data ) {
-
 		$email = sanitize_email( $data['user_email'] ?? '' );
-		if ( ! $email ) {
-			return new WP_Error( 'entireus_bad_email', 'Remote user has no email.' );
+		if ( ! $email || ! is_email( $email ) ) {
+			return new WP_Error(
+				'entireus_bad_email',
+				'Remote user has an invalid email address.'
+			);
 		}
 
 		$user_data = array(
@@ -320,12 +401,15 @@ class Sync extends Base {
 			'description'  => sanitize_textarea_field( $data['description'] ?? '' ),
 		);
 
+		/*
+		 * Passwords must not be sanitized or modified.
+		 */
 		if ( ! empty( $data['user_pass'] ) ) {
 			$user_data['user_pass'] = $data['user_pass'];
 		}
 
 		$existing = get_user_by( 'email', $email );
-		if ( $existing ) {
+		if ( $existing instanceof WP_User ) {
 			$user_data['ID'] = $existing->ID;
 			$user_id         = wp_update_user( $user_data );
 		} else {
@@ -355,74 +439,115 @@ class Sync extends Base {
 			$this->apply_meta( $user_id, $data['meta'] );
 		}
 
-		update_user_meta( $user_id, '_entireus_imported_from', sanitize_text_field( $data['site_url'] ?? '' ) );
+		if ( ! empty( $data['site_url'] ) ) {
+			update_user_meta(
+				$user_id,
+				'_entireus_imported_from',
+				esc_url_raw( $data['site_url'] )
+			);
+		}
 
-		return $user;
+		return get_user_by( 'id', $user_id );
 	}
 
 	/**
-	 * Apply roles to a WP_User instance, filtering by allowed list.
+	 * Apply roles to a user.
 	 *
-	 * @param int   $user_id User ID to modify.
-	 * @param array $roles Roles from remote payload.
+	 * Only configured roles are allowed.
+	 *
+	 * @param int                  $user_id User ID.
+	 * @param array<int,mixed>     $roles   Remote roles.
 	 *
 	 * @return void
 	 */
 	public function apply_roles( int $user_id, array $roles ): void {
 		$wp_user = new WP_User( $user_id );
 
+		$allowed_roles = $this->get_roles();
+
+		if ( empty( $allowed_roles ) ) {
+			return;
+		}
+
+		$remote_roles = array_map( 'sanitize_key', $roles );
+
 		$valid_roles = array_intersect(
-			array_map( 'sanitize_key', $roles ),
-			$this->get_roles()
+			$remote_roles,
+			$allowed_roles
 		);
+
 
 		$role = reset( $valid_roles );
 
-		if ( $role && ( get_role( $role ) || $role === 'none' ) ) {
-			if ( $role === 'none' ) {
-				$wp_user->set_role( '' );
-			} else {
-				$wp_user->set_role( $role );
-			}
-		} elseif ( empty( $wp_user->roles ) ) {
-			$default_role = get_option( 'default_role', 'subscriber' );
+		if ( 'none' === $role ) {
+			$wp_user->set_role( '' );
 
-			if ( get_role( $default_role ) ) {
-				$wp_user->set_role( $default_role );
-			}
+			return;
+		}
+
+		if ( false !== $role && get_role( $role ) ) {
+			$wp_user->set_role( $role );
 		}
 	}
 
 	/**
-	 * Apply user meta from remote payload respecting allowed meta keys.
+	 * Apply user meta from remote payload.
 	 *
-	 * @param int   $user_id User ID to update.
-	 * @param array $meta Meta array from remote.
+	 * Only explicitly configured meta keys are synchronized.
+	 *
+	 * @param int                 $user_id User ID.
+	 * @param array<string,mixed> $meta    Remote meta.
 	 *
 	 * @return void
 	 */
 	public function apply_meta( int $user_id, array $meta ): void {
 		$allowed_meta_keys = $this->get_meta_keys();
+
+		if ( empty( $allowed_meta_keys ) ) {
+			return;
+		}
+
 		foreach ( $meta as $key => $value ) {
-			$key = sanitize_key( $key );
-			if ( empty( $allowed_meta_keys ) || in_array( $key, $allowed_meta_keys, true ) ) {
-				update_user_meta( $user_id, $key, $value );
+			if ( ! is_string( $key ) || ! in_array( $key, $allowed_meta_keys, true ) ) {
+				continue;
 			}
+
+			update_user_meta( $user_id, $key, $value );
 		}
 	}
 
 	/**
 	 * Send a signed HTTP request to an endpoint.
 	 *
-	 * @param string $endpoint URL to call.
-	 * @param array  $data Data to send.
-	 * @param string $method HTTP method.
+	 * The timestamp and source site are included in the signed data so that
+	 * the receiver can validate both the request body and authentication context.
 	 *
-	 * @return array|WP_Error
+	 * @param string $endpoint REST endpoint.
+	 * @param array  $data     Request data.
+	 * @param string $method   HTTP method.
+	 *
+	 * @return array<string,mixed>|WP_Error
 	 */
 	public function send_request( string $endpoint, array $data, string $method = 'POST' ) {
 		$body      = wp_json_encode( $data );
-		$signature = hash_hmac( 'sha256', $body, $this->get_secret() );
+
+		if ( false === $body ) {
+			return new WP_Error(
+				'entireus_json_encode_failed',
+				'Unable to encode request data as JSON.'
+			);
+		}
+
+		$timestamp   = time();
+		$source_site = $this->get_site_url();
+
+		$signature_data = $timestamp . "\n" . $source_site . "\n" . $body;
+
+		$signature = hash_hmac(
+			'sha256',
+			$signature_data,
+			$this->get_secret()
+		);
 
 		$response = wp_remote_request(
 			$endpoint,
@@ -432,7 +557,7 @@ class Sync extends Base {
 				'headers' => array(
 					'Content-Type'         => 'application/json',
 					'X-EntireUS-Signature' => $signature,
-					'X-EntireUS-Timestamp' => time(),
+					'X-EntireUS-Timestamp' => (string) $timestamp,
 					'X-EntireUS-Site'      => $this->get_site_url(),
 				),
 				'body'    => $body,
@@ -443,54 +568,58 @@ class Sync extends Base {
 			return $response;
 		}
 
-		$code = wp_remote_retrieve_response_code( $response );
-		$body = wp_remote_retrieve_body( $response );
+		$status_code   = wp_remote_retrieve_response_code( $response );
+		$response_body = wp_remote_retrieve_body( $response );
 
 		$decoded = array();
 
-		if ( '' !== $body ) {
-			$decoded = json_decode( $body, true );
+		if ( '' !== $response_body ) {
+			$decoded = json_decode( $response_body, true );
 
-			if ( JSON_ERROR_NONE !== json_last_error() ) {
+			if ( JSON_ERROR_NONE !== json_last_error() || ! is_array( $decoded ) ) {
 				return new WP_Error(
 					'entireus_invalid_json',
 					'Invalid JSON response from remote site.',
 					array(
-						'code'     => $code,
-						'body'     => $body,
+						'status'   => $status_code,
 						'endpoint' => $endpoint,
-						'status'   => 'error',
 					)
 				);
 			}
 		}
 
-		if ( $code < 200 || $code >= 300 ) {
+		if ( $status_code < 200 || $status_code >= 300 ) {
+			$message = ! empty( $decoded['message'] ) && is_string( $decoded['message'] )
+				? sanitize_text_field( $decoded['message'] )
+				: sprintf(
+					'Remote request failed with status code %d.',
+					$status_code
+				);
+
 			return new WP_Error(
 				'entireus_remote_error',
-				$decoded['message'] ?? sprintf( 'Remote request failed (%d).', $code ),
+				$message,
 				array(
-					'code'     => $code,
+					'status'   => $status_code,
 					'data'     => $decoded,
 					'endpoint' => $endpoint,
-					'status'   => 'error',
 				)
 			);
 		}
 
-		// Optionally include the HTTP status code.
-		$decoded['code'] = $code;
+		$decoded['code'] = $status_code;
 
 		return $decoded;
 	}
 
 	/**
-	 * Triggered when a user is registered/updated; conditionally send the user.
+	 * Triggered when a user is registered or updated.
 	 *
 	 * @param int $user_id User ID.
+	 *
+	 * @return void
 	 */
 	public function maybe_auto_sync_user( int $user_id ): void {
-
 		if ( self::$is_syncing ) {
 			return;
 		}
@@ -501,8 +630,8 @@ class Sync extends Base {
 	/**
 	 * Triggered when a user role is changed; conditionally send the user.
 	 *
-	 * @param int    $user_id User ID.
-	 * @param string $role New role.
+	 * @param int    $user_id   User ID.
+	 * @param string $role      New role.
 	 * @param array  $old_roles Old roles.
 	 */
 	public function maybe_auto_sync_user_role( int $user_id, $role = null, $old_roles = null ): void {
@@ -522,8 +651,7 @@ class Sync extends Base {
 		$results = array();
 
 		foreach ( $this->get_active_sites() as $site ) {
-
-			if ( ! $this->allow_sync( $user_id, $site['url']  ) ) {
+			if ( ! $this->allow_sync( $user_id, $site['url'] ) ) {
 				continue;
 			}
 
@@ -578,10 +706,13 @@ class Sync extends Base {
 	/**
 	 * Build the outgoing payload for a user.
 	 *
-	 * @param WP_User $user User object.
-	 * @param array   $site Site config.
+	 * Passwords are intentionally not included here. Password changes are
+	 * synchronized through the wp_set_password hook.
 	 *
-	 * @return array Payload array.
+	 * @param WP_User               $user User object.
+	 * @param array<string,mixed>   $site Site config.
+	 *
+	 * @return array<string,mixed> Payload.
 	 */
 	private function build_payload( WP_User $user, array $site ): array {
 		$payload = array(
@@ -592,38 +723,47 @@ class Sync extends Base {
 			'display_name' => $user->display_name,
 			'user_url'     => $user->user_url,
 			'description'  => $user->description,
-			'roles'        => empty( $user->roles ) ? array( 'none' ) : $user->roles,
+			'roles'        => empty( $user->roles )
+				? array( 'none' )
+				: $user->roles,
 			'source_site'  => $this->get_site_url(),
-			'target_site'  => $site['url'],
+			'target_site'  => isset( $site['url'] )
+				? esc_url_raw( $site['url'] )
+				: '',
 			'hook'         => current_filter(),
 		);
 
-		if ( ! empty( $_POST['pass1'] ) ) {
-			$payload['user_pass'] = $_POST['pass1'];
-		}
+		$meta_keys = $this->get_meta_keys();
 
-		$meta_keys       = $this->get_meta_keys();
-		$payload['meta'] = array();
-		foreach ( $meta_keys as $key ) {
-			$payload['meta'][ $key ] = get_user_meta( $user->ID, $key, true );
+		if ( ! empty( $meta_keys ) ) {
+			$payload['meta'] = array();
+
+			foreach ( $meta_keys as $key ) {
+				$payload['meta'][ $key ] = get_user_meta(
+					$user->ID,
+					$key,
+					true
+				);
+			}
 		}
 
 		return $payload;
 	}
 
 	/**
-	 * Conditionally delete a user on remote sites when local user is removed.
+	 * Conditionally delete a user on remote sites.
 	 *
 	 * @param int $user_id User ID.
+	 *
+	 * @return void
 	 */
 	public function maybe_auto_delete_user( int $user_id ): void {
-
 		if ( self::$is_syncing ) {
 			return;
 		}
 
 		$user = get_userdata( $user_id );
-		if ( ! $user ) {
+		if ( ! $user instanceof WP_User ) {
 			return;
 		}
 		$this->delete_user( $user );
@@ -632,21 +772,20 @@ class Sync extends Base {
 	/**
 	 * Request remote sites to delete a user.
 	 *
-	 * @param string $email User email.
+	 * @param WP_User $user User object.
 	 *
-	 * @return array Results per site.
+	 * @return array<string,array|WP_Error> Results per site.
 	 */
 	public function delete_user( WP_User $user ): array {
 		$results = array();
 
 		$email = sanitize_email( $user->user_email );
 		foreach ( $this->get_active_sites() as $site ) {
-
-			if ( ! $this->allow_sync( $user->ID, $site['url']  ) ) {
+			if ( ! $this->allow_sync( $user->ID, $site['url'] ) ) {
 				continue;
 			}
 
-			$payload = array(
+			$payload  = array(
 				'email'       => $email,
 				'roles'       => empty( $user->roles ) ? array( 'none' ) : $user->roles,
 				'target_site' => $site['url'],
@@ -702,32 +841,27 @@ class Sync extends Base {
 	}
 
 	/**
-	 * Attempt to authenticate by checking remote sites for the user.
+	 * Attempt to authenticate by checking remote sites.
 	 *
-	 * @param WP_User|WP_Error|null $user Authenticated user, WP_Error or null.
+	 * @param WP_User|WP_Error|null $user     Authenticated user, error or null.
 	 * @param string                $username Username.
 	 * @param string                $password Password.
 	 *
 	 * @return WP_User|WP_Error|null
 	 */
 	public function maybe_import_remote_user( $user, string $username, string $password ) {
-
-		if ( $user instanceof WP_User ) {
-			return $user;
-		}
-
-		if ( empty( $username ) ) {
+		if ( $user instanceof WP_User || '' === $username || '' === $password ) {
 			return $user;
 		}
 
 		foreach ( $this->get_active_sites() as $site ) {
-			$payload = array(
+			$payload  = array(
 				'username'    => $username,
 				'user_pass'   => $password,
-				'roles'        => empty( $user->roles ) ? array( 'none' ) : $user->roles,
-				'source_site'  => $this->get_site_url(),
-				'target_site'  => $site['url'],
-				'hook'         => current_filter(),
+				'roles'       => empty( $user->roles ) ? array( 'none' ) : $user->roles,
+				'source_site' => $this->get_site_url(),
+				'target_site' => $site['url'],
+				'hook'        => current_filter(),
 			);
 			$response = $this->send_request(
 				$this->endpoint( $site, 'get-user' ),
@@ -775,8 +909,13 @@ class Sync extends Base {
 				continue;
 			}
 
+			/*
+			 * The remote endpoint has already authenticated the password.
+			 * Use the supplied plaintext password only for creating/updating
+			 * the local WordPress password.
+			 */
 			$remote_user['user_pass'] = $password;
-			self::$is_syncing = true;
+			self::$is_syncing         = true;
 
 			try {
 				$local_user = $this->create_user( $remote_user );
@@ -829,10 +968,12 @@ class Sync extends Base {
 	/**
 	 * Handle password reset event.
 	 *
-	 * @param \WP_User $user User object.
-	 * @param string   $new_pass New password.
+	 * @param WP_User $user     User object.
+	 * @param string  $new_pass New plaintext password.
+	 *
+	 * @return void
 	 */
-	public function on_password_reset( \WP_User $user, string $new_pass ): void {
+	public function on_password_reset( WP_User $user, string $new_pass ): void {
 		if ( self::$is_syncing ) {
 			return;
 		}
@@ -841,28 +982,31 @@ class Sync extends Base {
 	}
 
 	/**
-	 * Handle low-level set password action.
+	 * Handle low-level password change.
 	 *
-	 * @param string $password New password.
-	 * @param int    $user_id User ID.
+	 * @param string $password Plaintext password.
+	 * @param int    $user_id  User ID.
+	 *
+	 * @return void
 	 */
 	public function on_set_password( string $password, int $user_id ): void {
-		if ( self::$is_syncing ) {
+		if ( self::$is_syncing || '' === $password || ! $user_id ) {
 			return;
 		}
 
-		if ( $user_id ) {
-			$this->sync_password( $user_id, $password );
-		}
+		$this->sync_password( $user_id, $password );
 	}
 
 	/**
-	 * Sync a user's password hash to remote sites.
+	 * Sync a user's password to remote sites.
 	 *
-	 * @param int|WP_User $user User ID or user object.
-	 * @param string      $password Password hash.
+	 * The password is transmitted only to the configured remote endpoint
+	 * over the signed HTTPS request and is never written to logs.
 	 *
-	 * @return array Results per site.
+	 * @param int|WP_User $user     User ID or user object.
+	 * @param string      $password Plaintext password.
+	 *
+	 * @return array<string,array|WP_Error> Results per site.
 	 */
 	public function sync_password( $user, string $password ): array {
 		$results = array();
@@ -876,15 +1020,14 @@ class Sync extends Base {
 		}
 
 		foreach ( $this->get_active_sites() as $site ) {
-
-			if ( ! $this->allow_sync( $user->ID, $site['url']  ) ) {
+			if ( ! $this->allow_sync( $user->ID, $site['url'] ) ) {
 				continue;
 			}
 
 			$payload = array(
 				'user_email'  => $user->user_email,
 				'user_pass'   => $password,
-				'roles'        => empty( $user->roles ) ? array( 'none' ) : $user->roles,
+				'roles'       => empty( $user->roles ) ? array( 'none' ) : $user->roles,
 				'target_site' => $site['url'],
 				'source_site' => $this->get_site_url(),
 				'hook'        => current_filter(),
@@ -938,9 +1081,81 @@ class Sync extends Base {
 	}
 
 	/**
+	 * Remove sensitive values before logging.
+	 *
+	 * @param mixed $data Data to redact.
+	 *
+	 * @return mixed Redacted data.
+	 */
+	private function redact_sensitive_data( $data ) {
+		if ( ! is_array( $data ) ) {
+			return $data;
+		}
+
+		$sensitive_keys = array(
+			'user_pass',
+			'password',
+			'pass1',
+			'pass2',
+			'pwd',
+			'secret',
+			'secret_key',
+			'token',
+			'access_token',
+			'refresh_token',
+		);
+
+		foreach ( $data as $key => &$value ) {
+			if ( in_array( strtolower( (string) $key ), $sensitive_keys, true ) ) {
+				$value = '[REDACTED]';
+				continue;
+			}
+
+			if ( is_array( $value ) ) {
+				$value = $this->redact_sensitive_data( $value );
+			}
+		}
+
+		unset( $value );
+
+		return $data;
+	}
+
+	/**
+	 * Return a safe representation of a response for logging.
+	 *
+	 * @param array|WP_Error $response Response.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private function format_response_for_log( $response ): array {
+		if ( is_wp_error( $response ) ) {
+			return array(
+				'error_code' => $response->get_error_code(),
+				'message'    => $response->get_error_message(),
+				'status'     => $response->get_error_data()['status'] ?? null,
+			);
+		}
+
+		if ( ! is_array( $response ) ) {
+			return array();
+		}
+
+		return array(
+			'code'    => $response['code'] ?? null,
+			'status'  => $response['status'] ?? null,
+			'message' => isset( $response['message'] )
+				? sanitize_text_field( $response['message'] )
+				: '',
+		);
+	}
+
+	/**
 	 * Write a log if logging is enabled.
 	 *
-	 * @param array $args Log arguments.
+	 * @param array<string,mixed> $args Log arguments.
+	 *
+	 * @return void
 	 */
 	public function write_log( array $args ): void {
 		if ( ! $this->settings()->get( 'configuration', 'enable_log' ) ) {
@@ -949,6 +1164,8 @@ class Sync extends Base {
 
 		$logger = new Logger();
 
-		$logger->log( $args );
+		$logger->log(
+			$this->redact_sensitive_data( $args )
+		);
 	}
 }

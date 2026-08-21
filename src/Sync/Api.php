@@ -4,7 +4,7 @@
  *
  * Exposes endpoints for getting user info, syncing users, syncing passwords and deleting users.
  *
- * @package EntireUserSync\Sync
+ * @package EntireUserSync
  */
 
 namespace EntireUserSync\Sync;
@@ -84,43 +84,48 @@ class Api extends Sync {
 	}
 
 	/**
-	 * Verify incoming request signature and mark request as incoming sync.
+	 * Verify incoming request signature.
+	 *
+	 * The timestamp, source site and request body are included in the
+	 * signed data to prevent tampering with authentication headers.
 	 *
 	 * @param WP_REST_Request $request REST request instance.
 	 *
-	 * @return true|WP_Error True if the signature is valid, otherwise a WP_Error.
+	 * @return true|WP_Error True if the signature is valid.
 	 */
 	public function verify_signature( WP_REST_Request $request ) {
-
 		$secret      = $this->get_secret();
 		$signature   = $request->get_header( 'X-EntireUS-Signature' );
 		$source_site = $request->get_header( 'X-EntireUS-Site' );
 		$timestamp   = absint( $request->get_header( 'X-EntireUS-Timestamp' ) );
 		$body        = $request->get_body();
 
-		// 1. Allowlist.
+		// 1. Required authentication data.
+		if ( ! $secret || ! $signature || ! $source_site || ! $timestamp ) {
+			return $this->fail_auth( $request, 'Missing authentication headers.' );
+		}
+
+		// 2. Allowlist.
 		if ( ! $this->is_allowed_site( $source_site ) ) {
-			return $this->fail_auth( $request, 'Unauthorized site: ' . $source_site );
+			return $this->fail_auth( $request, 'Unauthorized site.' );
 		}
 
-		// 2. Missing headers.
-		if ( ! $secret || ! $signature ) {
-			return $this->fail_auth( $request, 'Missing auth headers' );
+		// 3. Replay protection.
+		if ( abs( time() - $timestamp ) > 300 ) {
+			return $this->fail_auth( $request, 'Request expired.' );
 		}
 
-		// 3. Replay protection (5-min window).
-		if ( ! $timestamp || abs( time() - $timestamp ) > 300 ) {
-			return $this->fail_auth( $request, 'Request expired' );
-		}
+		// 4. Verify signature.
+		$signature_data = $timestamp . "\n" . $source_site . "\n" . $body;
 
-		// 4. Signature check.
-		$valid = hash_equals(
-			hash_hmac( 'sha256', $body, $secret ),
-			$signature
+		$expected_signature = hash_hmac(
+			'sha256',
+			$signature_data,
+			$secret
 		);
 
-		if ( ! $valid ) {
-			return $this->fail_auth( $request, 'Invalid signature' );
+		if ( ! hash_equals( $expected_signature, $signature ) ) {
+			return $this->fail_auth( $request, 'Invalid signature.' );
 		}
 
 		return true;
@@ -135,7 +140,6 @@ class Api extends Sync {
 	 * @return WP_Error
 	 */
 	private function fail_auth( WP_REST_Request $request, string $message ): WP_Error {
-
 		$source_site = $request->get_header( 'X-EntireUS-Site' );
 
 		$this->write_log(
@@ -153,7 +157,7 @@ class Api extends Sync {
 		return new WP_Error(
 			'entireus_forbidden',
 			$message,
-			array( 'status' => 403 )
+			array( 'status' => 401 )
 		);
 	}
 
@@ -174,9 +178,9 @@ class Api extends Sync {
 		if ( ! $username || ! $password ) {
 			return new WP_REST_Response(
 				array(
-					'message' => 'Missing credentials.',
+					'message'  => 'Missing credentials.',
 					'username' => $username,
-					'status' => 'error',
+					'status'   => 'error',
 				),
 				400
 			);
@@ -191,9 +195,9 @@ class Api extends Sync {
 		if ( ! $user || ! wp_check_password( $password, $user->user_pass, $user->ID ) ) {
 			return new WP_REST_Response(
 				array(
-					'message' => 'Invalid credentials.',
+					'message'  => 'Invalid credentials.',
 					'username' => $username,
-					'status' => 'error',
+					'status'   => 'error',
 				),
 				401
 			);
@@ -210,7 +214,7 @@ class Api extends Sync {
 					'allowed_roles' => $this->get_roles(),
 					'status'        => 'error',
 				),
-				401
+				403
 			);
 		}
 
@@ -255,23 +259,34 @@ class Api extends Sync {
 			return new WP_REST_Response(
 				array(
 					'message' => 'Missing user_email.',
-					'status' => 'error',
+					'status'  => 'error',
 				),
 				400
 			);
 		}
 
-		$email      = sanitize_email( $data['user_email'] );
-		$existing   = get_user_by( 'email', $email );
+		$email = sanitize_email( $data['user_email'] );
+		if ( ! is_email( $email ) ) {
+			return new WP_REST_Response(
+				array(
+					'message' => 'Invalid user_email.',
+					'status'  => 'error',
+				),
+				400
+			);
+		}
+
+		$existing    = get_user_by( 'email', $email );
 		$target_site = $data['target_site'] ?? '';
 		$source_site = $data['source_site'] ?? '';
 
-		$roles = $data['roles'] ?? array();
+		$roles         = isset( $data['roles'] ) && is_array( $data['roles'] ) ?
+			array_map( 'sanitize_key', $data['roles'] ) :
+			array();
+		$allowed_roles = $this->get_roles();
 
 		if ( $existing ) {
-			$allow_sync = $this->allow_sync( $existing->ID );
-
-			if( ! $allow_sync ) {
+			if ( ! $this->allow_sync( $existing->ID ) ) {
 				return new WP_REST_Response(
 					array(
 						'message'       => 'User does not have the required role for sync.',
@@ -284,42 +299,52 @@ class Api extends Sync {
 					401
 				);
 			}
-
 		} else if (
 			empty( $roles ) ||
 			! array_intersect( $roles, $this->get_roles() )
 		) {
-			$this->write_log(
-				array(
-					'event'       => 'sync',
-					'direction'   => 'incoming',
-					'user_email'  => $email,
-					'status'      => 'error',
-					'target_site' => $target_site,
-					'source_site' => $source_site,
-					'message'     => 'User does not have the required role for sync.',
-					'payload'     => array(
+			/*
+			 * A new user must contain at least one allowed role.
+			 */
+			$valid_roles = array_intersect( $roles, $allowed_roles );
+
+			if ( empty( $valid_roles ) ) {
+				$this->write_log(
+					array(
+						'event'       => 'sync',
+						'direction'   => 'incoming',
+						'user_email'  => $email,
+						'status'      => 'error',
+						'target_site' => $target_site,
+						'source_site' => $source_site,
+						'message'     => 'User does not have the required role for sync.',
+						'payload'     => array(
+							'hook'                => current_filter(),
+							'user_email'          => $email,
+							'requested_user_role' => $roles,
+							'allowed_roles'       => $this->get_roles(),
+						),
+					)
+				);
+
+				return new WP_REST_Response(
+					array(
+						'message'       => 'User does not have the required role for sync.',
+						'user_role'     => $roles,
 						'hook'          => current_filter(),
 						'user_email'    => $email,
-						'user_role'     => $roles,
 						'allowed_roles' => $this->get_roles(),
+						'status'        => 'error',
 					),
-				)
-			);
+					403
+				);
+			}
 
-			return new WP_REST_Response(
-				array(
-					'message'       => 'User does not have the required role for sync.',
-					'user_role'     => $roles,
-					'hook'          => current_filter(),
-					'user_email'    => $email,
-					'allowed_roles' => $this->get_roles(),
-					'status'        => 'error',
-				),
-				401
-			);
+			/*
+			 * Only pass allowed roles to the user creation/update logic.
+			 */
+			$data['roles'] = array_values( $valid_roles );
 		}
-
 
 		self::$is_syncing = true;
 		try {
@@ -368,10 +393,11 @@ class Api extends Sync {
 
 		return new WP_REST_Response(
 			array(
-				'message' => $existing ? 'User updated.' : 'User created.',
-				'code'    => $existing ? 'user_updated' : 'user_created',
-				'user'    => $local_user,
-				'status'  => 'success',
+				'message'    => $existing ? 'User updated.' : 'User created.',
+				'code'       => $existing ? 'user_updated' : 'user_created',
+				'user_id'    => $existing->ID,
+				'user_email' => $existing->user_email,
+				'status'     => 'success',
 			),
 			200
 		);
@@ -387,12 +413,12 @@ class Api extends Sync {
 	public function handle_sync_password( WP_REST_Request $request ): WP_REST_Response {
 		$data     = $request->get_json_params();
 		$email    = sanitize_email( $data['user_email'] ?? '' );
-		$password = sanitize_text_field( $data['user_pass'] ?? '' );
+		$password = $data['user_pass'] ?? '';
 
-		if ( ! $email || ! $password ) {
+		if ( ! $email || ! is_email( $email ) || ! is_string( $password ) || '' === $password ) {
 			return new WP_REST_Response(
 				array(
-					'message'    => 'Missing email or password.',
+					'message'    => 'Missing or invalid email or password.',
 					'user_email' => $email,
 					'status'     => 'error',
 				),
@@ -404,9 +430,9 @@ class Api extends Sync {
 		if ( ! $user ) {
 			return new WP_REST_Response(
 				array(
-					'message' => 'User not found.',
+					'message'    => 'User not found.',
 					'user_email' => $email,
-					'status' => 'error',
+					'status'     => 'error',
 				),
 				404
 			);
@@ -422,7 +448,7 @@ class Api extends Sync {
 					'allowed_roles' => $this->get_roles(),
 					'status'        => 'error',
 				),
-				401
+				403
 			);
 		}
 
@@ -468,13 +494,26 @@ class Api extends Sync {
 		$data  = $request->get_json_params();
 		$email = sanitize_email( $data['email'] ?? '' );
 
-		if ( ! $email ) {
-			return new WP_REST_Response( array( 'message' => 'Missing email.' ), 400 );
+		if ( ! $email || ! is_email( $email ) ) {
+			return new WP_REST_Response(
+				array(
+					'message' => 'Missing or invalid email.',
+					'status'  => 'error',
+				),
+				400
+			);
 		}
 
 		$user = get_user_by( 'email', $email );
 		if ( ! $user ) {
-			return new WP_REST_Response( array( 'message' => 'User not found.' ), 404 );
+			return new WP_REST_Response(
+				array(
+					'message'    => 'User not found.',
+					'user_email' => $email,
+					'status'     => 'error',
+				),
+				404
+			);
 		}
 
 		if ( ! $this->allow_sync( $user->ID ) ) {
@@ -487,7 +526,7 @@ class Api extends Sync {
 					'allowed_roles' => $this->get_roles(),
 					'status'        => 'error',
 				),
-				401
+				403
 			);
 		}
 
