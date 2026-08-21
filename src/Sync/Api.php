@@ -257,7 +257,7 @@ class Api extends Sync {
 		if ( $existing && ! $this->allow_sync( $existing->ID ) ) {
 			return new WP_REST_Response(
 				array(
-					'message'   => 'User does not have the required role for sync2.',
+					'message'   => 'User does not have the required role for sync.',
 					'user_role' => $existing->roles,
 					'status'    => 'error',
 				),
@@ -272,7 +272,7 @@ class Api extends Sync {
 		) {
 			return new WP_REST_Response(
 				array(
-					'message'   => 'User does not have the required role for sync1.',
+					'message'   => 'User does not have the required role for sync.',
 					'user_role' => $roles,
 					'status'    => 'error',
 				),
