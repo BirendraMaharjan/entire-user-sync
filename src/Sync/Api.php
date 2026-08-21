@@ -263,28 +263,50 @@ class Api extends Sync {
 
 		$email      = sanitize_email( $data['user_email'] );
 		$existing   = get_user_by( 'email', $email );
+		$target_site = $data['target_site'] ?? '';
+		$source_site = $data['source_site'] ?? '';
 
 		$roles = $data['roles'] ?? array();
-		if ( $existing && ! $this->allow_sync( $existing->ID ) ) {
-			return new WP_REST_Response(
-				array(
-					'message'       => 'User does not have the required role for sync.',
-					'hook'          => current_filter(),
-					'user_email'    => $existing->user_email,
-					'user_role'     => $existing->roles,
-					'allowed_roles' => $this->get_roles(),
-					'status'        => 'error',
-				),
-				401
-			);
+
+		if ( $existing ) {
+			$allow_sync = $this->allow_sync( $existing->ID );
+
+			if( ! $allow_sync ) {
+				return new WP_REST_Response(
+					array(
+						'message'       => 'User does not have the required role for sync.',
+						'hook'          => current_filter(),
+						'user_email'    => $existing->user_email,
+						'user_role'     => $existing->roles,
+						'allowed_roles' => $this->get_roles(),
+						'status'        => 'error',
+					),
+					401
+				);
+			}
 
 		} else if (
-			! $existing &&
-			(
-				empty( $roles ) ||
-				! array_intersect( $roles, $this->get_roles() )
-			)
+			empty( $roles ) ||
+			! array_intersect( $roles, $this->get_roles() )
 		) {
+			$this->write_log(
+				array(
+					'event'       => 'sync',
+					'direction'   => 'incoming',
+					'user_email'  => $email,
+					'status'      => 'error',
+					'target_site' => $target_site,
+					'source_site' => $source_site,
+					'message'     => 'User does not have the required role for sync.',
+					'payload'     => array(
+						'hook'          => current_filter(),
+						'user_email'    => $email,
+						'user_role'     => $roles,
+						'allowed_roles' => $this->get_roles(),
+					),
+				)
+			);
+
 			return new WP_REST_Response(
 				array(
 					'message'       => 'User does not have the required role for sync.',
