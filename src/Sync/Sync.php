@@ -227,8 +227,10 @@ class Sync extends Base {
 					'source_site' => $this->get_site_url(),
 					'message'    => 'User does not exist.',
 					'payload'    => array(
-						'hook'    => current_filter(),
-						'user_id' => $user_id,
+						'hook'       => current_filter(),
+						'user_email' => $user->user_email,
+						'user_role'   => $user->roles,
+						'allowed_roles' => $this->get_roles(),
 					),
 				)
 			);
@@ -240,7 +242,10 @@ class Sync extends Base {
 			$user->roles = array( 'none' );
 		}
 
-		if ( empty( $this->get_roles() ) || ! array_intersect( $user->roles, $this->get_roles() ) ) {
+		if (
+			empty( $this->get_roles() ) ||
+			! array_intersect( $user->roles, $this->get_roles() )
+		) {
 			$this->write_log(
 				array(
 					'event'       => 'sync',
@@ -253,6 +258,8 @@ class Sync extends Base {
 					'payload'     => array(
 						'hook'       => current_filter(),
 						'user_email' => $user->user_email,
+						'user_role'   => $user->roles,
+						'allowed_roles' => $this->get_roles(),
 					),
 
 				)
