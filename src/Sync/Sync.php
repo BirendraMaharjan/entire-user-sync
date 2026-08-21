@@ -261,7 +261,6 @@ class Sync extends Base {
 						'user_role'   => $user->roles,
 						'allowed_roles' => $this->get_roles(),
 					),
-
 				)
 			);
 
