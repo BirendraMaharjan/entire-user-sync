@@ -172,7 +172,14 @@ class Api extends Sync {
 		$password = $params['user_pass'] ?? '';
 
 		if ( ! $username || ! $password ) {
-			return new WP_REST_Response( array( 'message' => 'Missing credentials.' ), 400 );
+			return new WP_REST_Response(
+				array(
+					'message' => 'Missing credentials.',
+					'username' => $username,
+					'status' => 'error',
+				),
+				400
+			);
 		}
 
 		$user = get_user_by( 'login', $username );
@@ -181,20 +188,12 @@ class Api extends Sync {
 			$user = get_user_by( 'email', $username );
 		}
 
-		if ( ! $this->allow_sync( $user->ID ) ) {
-			return new WP_REST_Response(
-				array(
-					'message'   => 'User does not have the required role for sync.',
-					'user_role' => $user->roles,
-				),
-				401
-			);
-		}
-
 		if ( ! $user || ! wp_check_password( $password, $user->user_pass, $user->ID ) ) {
 			return new WP_REST_Response(
 				array(
 					'message' => 'Invalid credentials.',
+					'username' => $username,
+					'status' => 'error',
 				),
 				401
 			);
@@ -203,8 +202,13 @@ class Api extends Sync {
 		if ( ! $this->allow_sync( $user->ID ) ) {
 			return new WP_REST_Response(
 				array(
-					'message'   => 'User does not have the required role for sync.',
-					'user_role' => $user->roles,
+					'message'       => 'User does not have the required role for sync.',
+					'hook'          => current_filter(),
+					'user_email'    => $user->user_email,
+					'username'      => $user->user_login,
+					'user_role'     => $user->roles,
+					'allowed_roles' => $this->get_roles(),
+					'status'        => 'error',
 				),
 				401
 			);
@@ -219,7 +223,7 @@ class Api extends Sync {
 
 		return new WP_REST_Response(
 			array(
-				'user' => array(
+				'user'   => array(
 					'user_login'   => $user->user_login,
 					'user_email'   => $user->user_email,
 					'first_name'   => $user->first_name,
@@ -231,6 +235,7 @@ class Api extends Sync {
 					'meta'         => $meta,
 					'site_url'     => get_site_url(),
 				),
+				'status' => 'success',
 			),
 			200
 		);
@@ -247,7 +252,13 @@ class Api extends Sync {
 		$data = $request->get_json_params();
 
 		if ( empty( $data['user_email'] ) ) {
-			return new WP_REST_Response( array( 'message' => 'Missing user_email.' ), 400 );
+			return new WP_REST_Response(
+				array(
+					'message' => 'Missing user_email.',
+					'status' => 'error',
+				),
+				400
+			);
 		}
 
 		$email      = sanitize_email( $data['user_email'] );
@@ -257,10 +268,14 @@ class Api extends Sync {
 		if ( $existing && ! $this->allow_sync( $existing->ID ) ) {
 			return new WP_REST_Response(
 				array(
-					'message'   => 'User does not have the required role for sync.',
-					'user_role' => $existing->roles,
-					'status'    => 'error',
+					'message'       => 'User does not have the required role for sync.',
+					'hook'          => current_filter(),
+					'user_email'    => $existing->user_email,
+					'user_role'     => $existing->roles,
+					'allowed_roles' => $this->get_roles(),
+					'status'        => 'error',
 				),
+				401
 			);
 
 		} else if (
@@ -272,10 +287,14 @@ class Api extends Sync {
 		) {
 			return new WP_REST_Response(
 				array(
-					'message'   => 'User does not have the required role for sync.',
-					'user_role' => $roles,
-					'status'    => 'error',
+					'message'       => 'User does not have the required role for sync.',
+					'user_role'     => $roles,
+					'hook'          => current_filter(),
+					'user_email'    => $email,
+					'allowed_roles' => $this->get_roles(),
+					'status'        => 'error',
 				),
+				401
 			);
 		}
 
@@ -302,7 +321,14 @@ class Api extends Sync {
 				)
 			);
 
-			return new WP_REST_Response( array( 'message' => $local_user->get_error_message() ), 500 );
+			return new WP_REST_Response(
+				array(
+					'message'    => $local_user->get_error_message(),
+					'user_email' => $email,
+					'status'     => 'error',
+				),
+				500
+			);
 		}
 
 		$this->write_log(
@@ -342,20 +368,37 @@ class Api extends Sync {
 		$password = sanitize_text_field( $data['user_pass'] ?? '' );
 
 		if ( ! $email || ! $password ) {
-			return new WP_REST_Response( array( 'message' => 'Missing email or password.' ), 400 );
+			return new WP_REST_Response(
+				array(
+					'message'    => 'Missing email or password.',
+					'user_email' => $email,
+					'status'     => 'error',
+				),
+				400
+			);
 		}
 
 		$user = get_user_by( 'email', $email );
 		if ( ! $user ) {
-			return new WP_REST_Response( array( 'message' => 'User not found.' ), 404 );
+			return new WP_REST_Response(
+				array(
+					'message' => 'User not found.',
+					'user_email' => $email,
+					'status' => 'error',
+				),
+				404
+			);
 		}
 
 		if ( ! $this->allow_sync( $user->ID ) ) {
 			return new WP_REST_Response(
 				array(
-					'message'   => 'User does not have the required role for sync.',
-					'user_role' => $user->roles,
-					'status'    => 'error',
+					'message'       => 'User does not have the required role for sync.',
+					'hook'          => current_filter(),
+					'user_email'    => $user->user_email,
+					'user_role'     => $user->roles,
+					'allowed_roles' => $this->get_roles(),
+					'status'        => 'error',
 				),
 				401
 			);
@@ -415,9 +458,12 @@ class Api extends Sync {
 		if ( ! $this->allow_sync( $user->ID ) ) {
 			return new WP_REST_Response(
 				array(
-					'message'   => 'User does not have the required role for sync.',
-					'user_role' => $user->roles,
-					'status'    => 'error',
+					'message'       => 'User does not have the required role for sync.',
+					'hook'          => current_filter(),
+					'user_email'    => $user->user_email,
+					'user_role'     => $user->roles,
+					'allowed_roles' => $this->get_roles(),
+					'status'        => 'error',
 				),
 				401
 			);
