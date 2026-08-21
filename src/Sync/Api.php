@@ -181,6 +181,16 @@ class Api extends Sync {
 			$user = get_user_by( 'email', $username );
 		}
 
+		if ( ! $this->allow_sync( $user->ID ) ) {
+			return new WP_REST_Response(
+				array(
+					'message'   => 'User does not have the required role for sync.',
+					'user_role' => $user->roles,
+				),
+				401
+			);
+		}
+
 		if ( ! $user || ! wp_check_password( $password, $user->user_pass, $user->ID ) ) {
 			return new WP_REST_Response(
 				array(
@@ -243,6 +253,25 @@ class Api extends Sync {
 		$email      = sanitize_email( $data['user_email'] );
 		$existing   = get_user_by( 'email', $email );
 
+		$roles = $data['roles'] ?? array();
+		if (
+			$existing ||
+			! $this->allow_sync(
+				null, $roles,
+					$data['source_site'] ?? '',
+					$data['target_site'] ?? ''
+			)
+		) {
+			return new WP_REST_Response(
+				array(
+					'message'   => 'User does not have the required role for sync.',
+					'user_role' => $roles,
+					'status'    => 'error',
+				),
+			);
+		}
+
+
 		self::$is_syncing = true;
 		try {
 			$local_user = $this->create_user( $data );
@@ -285,6 +314,7 @@ class Api extends Sync {
 			array(
 				'message' => $existing ? 'User updated.' : 'User created.',
 				'code'    => $existing ? 'user_updated' : 'user_created',
+				'status'  => 'error',
 				'user'    => $local_user,
 			),
 			200
@@ -309,8 +339,17 @@ class Api extends Sync {
 
 		$user = get_user_by( 'email', $email );
 		if ( ! $user ) {
-
 			return new WP_REST_Response( array( 'message' => 'User not found.' ), 404 );
+		}
+
+		if ( ! $this->allow_sync( $user->ID ) ) {
+			return new WP_REST_Response(
+				array(
+					'message'   => 'User does not have the required role for sync.',
+					'user_role' => $user->roles,
+				),
+				401
+			);
 		}
 
 		if ( ! $this->allow_sync( $user->ID ) ) {

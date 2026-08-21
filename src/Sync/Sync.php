@@ -58,7 +58,7 @@ class Sync extends Base {
 	public function init(): void {
 		add_action( 'user_register', array( $this, 'maybe_auto_sync_user' ) );
 		add_action( 'profile_update', array( $this, 'maybe_auto_sync_user' ) );
-		// add_action( 'set_user_role', array( $this, 'maybe_auto_sync_user_role' ) );
+		add_action( 'set_user_role', array( $this, 'maybe_auto_sync_user_role' ) );
 
 		add_action( 'delete_user', array( $this, 'maybe_auto_delete_user' ) );
 		// add_action( 'remove_user_from_blog', array( $this, 'maybe_auto_delete_user' ) );
@@ -205,48 +205,63 @@ class Sync extends Base {
 	/**
 	 * Decide whether the user should be synced outbound.
 	 *
-	 * @param int $user_id User ID.
+	 * @param int|null $user_id User ID.
+	 * @param array    $roles
 	 *
 	 * @return bool True if allowed, false otherwise.
 	 */
-	public function allow_sync( int $user_id ): bool {
+	public function allow_sync( ?int $user_id = null, array $roles = array(), string $source_site = '', string $target_site = '' ): bool {
 
 		if ( ! $this->auto_sync() ) {
 			return false;
 		}
 
-		$user = get_userdata( $user_id );
-		if ( ! $user ) {
-			$this->write_log(
-				array(
-					'event'      => 'sync',
-					'direction'  => 'outgoing',
-					'user_email' => '',
-					'status'     => 'error',
-					'message'    => 'User does not exist.',
-					'payload'    => array(
-						'hook'    => current_filter(),
-						'user_id' => $user_id,
-					),
-				)
-			);
+		$direction = 'incoming';
+		$user = null;
+		if ( null !== $user_id ) {
+			$user = get_userdata( $user_id );
+			$direction = 'outgoing';
+			$source_site = $this->get_site_url();
 
-			return false;
+			if ( ! $user ) {
+				$this->write_log(
+					array(
+						'event'       => 'sync',
+						'direction'   => $direction,
+						'user_email'  => '',
+						'target_site' => '',
+						'source_site' => $source_site,
+						'status'      => 'error',
+						'message'     => 'User does not exist.',
+						'payload'     => array(
+							'hook'    => current_filter(),
+							'user_id' => $user_id,
+						),
+					)
+				);
+
+				return false;
+			}
+
+			$roles = $user->roles;
 		}
 
-		if ( empty( $user->roles ) ) {
-			$user->roles = array( 'none' );
+		if ( empty( $roles ) ) {
+			$roles = array( 'none' );
 		}
 
-		if ( empty( $this->get_roles() ) || ! array_intersect( $user->roles, $this->get_roles() ) ) {
+		if (
+			empty( $this->get_roles() ) ||
+			! array_intersect( $roles, $this->get_roles() )
+		) {
 			$this->write_log(
 				array(
 					'event'       => 'sync',
-					'direction'   => 'outgoing',
+					'direction'   => $direction,
 					'user_email'  => $user->user_email,
 					'status'      => 'error',
-					'target_site' => '',
-					'source_site' => $this->get_site_url(),
+					'target_site' => $target_site,
+					'source_site' => $source_site,
 					'message'     => 'User does not have the required role for sync.',
 					'payload'     => array(
 						'hook'       => current_filter(),
@@ -495,6 +510,26 @@ class Sync extends Base {
 	}
 
 	/**
+	 * Triggered when a user role is changed; conditionally send the user.
+	 *
+	 * @param int    $user_id User ID.
+	 * @param string $role New role.
+	 * @param array  $old_roles Old roles.
+	 */
+	public function maybe_auto_sync_user_role( int $user_id, $role = null, $old_roles = null ): void {
+
+		if ( self::$is_syncing ) {
+			return;
+		}
+
+		if ( ! $this->allow_sync( $user_id ) ) {
+			return;
+		}
+		
+		$this->maybe_auto_sync_user( $user_id );
+	}
+
+	/**
 	 * Sync a single user to configured remote sites.
 	 *
 	 * @param int $user_id User ID.
@@ -543,7 +578,7 @@ class Sync extends Base {
 					'user_email'  => $user->user_email,
 					'target_site' => $site['url'],
 					'source_site' => $this->get_site_url(),
-					'status'      => 'success',
+					'status'      => $response['status'] ?? 'success',
 					'message'     => $response['message'] ?? '',
 					'payload'     => array(
 						'payload'  => $request_payload,
