@@ -254,22 +254,35 @@ class Api extends Sync {
 		$existing   = get_user_by( 'email', $email );
 
 		$roles = $data['roles'] ?? array();
-		if (
-			$existing ||
-			! $this->allow_sync(
-				null, $roles,
-					$data['source_site'] ?? '',
-					$data['target_site'] ?? ''
-			)
-		) {
+		if ( $existing && ! $this->allow_sync( $existing->ID ) ) {
+			error_log('one' . print_r($this->allow_sync( $existing->ID ) , true));
 			return new WP_REST_Response(
 				array(
-					'message'   => 'User does not have the required role for sync.',
+					'message'   => 'User does not have the required role for sync2.',
+					'user_role' => $existing->roles,
+					'status'    => 'error',
+				),
+			);
+
+		} else if (
+			! $existing &&
+			(
+				empty( $roles ) ||
+				! array_intersect( $roles, $this->get_roles() )
+			)
+		) {
+			error_log( 'two' . print_r( $this->allow_sync( null, $roles ), true ) );
+
+			return new WP_REST_Response(
+				array(
+					'message'   => 'User does not have the required role for sync1.',
 					'user_role' => $roles,
 					'status'    => 'error',
 				),
 			);
 		}
+
+		error_log('existing: ' . print_r($existing , true));
 
 
 		self::$is_syncing = true;
@@ -288,9 +301,9 @@ class Api extends Sync {
 					'user_email'  => $email,
 					'source_site' => $data['source_site'] ?? '',
 					'target_site' => $data['target_site'] ?? '',
-					'status'      => 'error',
 					'message'     => $local_user->get_error_message(),
 					'payload'     => $data,
+					'status'      => 'error',
 				)
 			);
 
@@ -304,9 +317,9 @@ class Api extends Sync {
 				'user_email'  => $email,
 				'source_site' => $data['source_site'] ?? '',
 				'target_site' => $data['target_site'] ?? '',
-				'status'      => 'success',
 				'message'     => $existing ? 'User updated from remote.' : 'User created from remote.',
 				'payload'     => $data,
+				'status'      => 'success',
 			)
 		);
 
@@ -314,8 +327,8 @@ class Api extends Sync {
 			array(
 				'message' => $existing ? 'User updated.' : 'User created.',
 				'code'    => $existing ? 'user_updated' : 'user_created',
-				'status'  => 'error',
 				'user'    => $local_user,
+				'status'  => 'success',
 			),
 			200
 		);
@@ -347,16 +360,7 @@ class Api extends Sync {
 				array(
 					'message'   => 'User does not have the required role for sync.',
 					'user_role' => $user->roles,
-				),
-				401
-			);
-		}
-
-		if ( ! $this->allow_sync( $user->ID ) ) {
-			return new WP_REST_Response(
-				array(
-					'message'   => 'User does not have the required role for sync.',
-					'user_role' => $user->roles,
+					'status'    => 'error',
 				),
 				401
 			);
@@ -387,6 +391,7 @@ class Api extends Sync {
 				'message' => 'Password synced.',
 				'code'    => 'password_synced',
 				'user'    => $user,
+				'status'  => 'success',
 			),
 			200
 		);
@@ -417,6 +422,7 @@ class Api extends Sync {
 				array(
 					'message'   => 'User does not have the required role for sync.',
 					'user_role' => $user->roles,
+					'status'    => 'error',
 				),
 				401
 			);
@@ -449,6 +455,7 @@ class Api extends Sync {
 				'message'    => $deleted ? 'User deleted.' : 'Delete failed.',
 				'code'       => $deleted ? 'user_deleted' : 'delete_failed',
 				'user_email' => $email,
+				'status'     => $deleted ? 'success' : 'error',
 			),
 			$deleted ? 200 : 500
 		);
