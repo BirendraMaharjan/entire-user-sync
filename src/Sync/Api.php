@@ -255,7 +255,6 @@ class Api extends Sync {
 
 		$roles = $data['roles'] ?? array();
 		if ( $existing && ! $this->allow_sync( $existing->ID ) ) {
-			error_log('one' . print_r($this->allow_sync( $existing->ID ) , true));
 			return new WP_REST_Response(
 				array(
 					'message'   => 'User does not have the required role for sync2.',
@@ -271,8 +270,6 @@ class Api extends Sync {
 				! array_intersect( $roles, $this->get_roles() )
 			)
 		) {
-			error_log( 'two' . print_r( $this->allow_sync( null, $roles ), true ) );
-
 			return new WP_REST_Response(
 				array(
 					'message'   => 'User does not have the required role for sync1.',
@@ -281,8 +278,6 @@ class Api extends Sync {
 				),
 			);
 		}
-
-		error_log('existing: ' . print_r($existing , true));
 
 
 		self::$is_syncing = true;
