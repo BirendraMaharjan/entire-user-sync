@@ -205,63 +205,50 @@ class Sync extends Base {
 	/**
 	 * Decide whether the user should be synced outbound.
 	 *
-	 * @param int|null $user_id User ID.
-	 * @param array    $roles
+	 * @param int $user_id User ID.
 	 *
 	 * @return bool True if allowed, false otherwise.
 	 */
-	public function allow_sync( ?int $user_id = null, array $roles = array(), string $source_site = '', string $target_site = '' ): bool {
+	public function allow_sync( int $user_id, $target_site = '' ): bool {
 
 		if ( ! $this->auto_sync() ) {
 			return false;
 		}
 
-		$direction = 'incoming';
-		$user = null;
-		if ( null !== $user_id ) {
-			$user = get_userdata( $user_id );
-			$direction = 'outgoing';
-			$source_site = $this->get_site_url();
+		$user = get_userdata( $user_id );
+		if ( ! $user ) {
+			$this->write_log(
+				array(
+					'event'      => 'sync',
+					'direction'  => 'outgoing',
+					'user_email' => '',
+					'status'     => 'error',
+					'target_site' => $target_site,
+					'source_site' => $this->get_site_url(),
+					'message'    => 'User does not exist.',
+					'payload'    => array(
+						'hook'    => current_filter(),
+						'user_id' => $user_id,
+					),
+				)
+			);
 
-			if ( ! $user ) {
-				$this->write_log(
-					array(
-						'event'       => 'sync',
-						'direction'   => $direction,
-						'user_email'  => '',
-						'target_site' => '',
-						'source_site' => $source_site,
-						'status'      => 'error',
-						'message'     => 'User does not exist.',
-						'payload'     => array(
-							'hook'    => current_filter(),
-							'user_id' => $user_id,
-						),
-					)
-				);
-
-				return false;
-			}
-
-			$roles = $user->roles;
+			return false;
 		}
 
-		if ( empty( $roles ) ) {
-			$roles = array( 'none' );
+		if ( empty( $user->roles ) ) {
+			$user->roles = array( 'none' );
 		}
 
-		if (
-			empty( $this->get_roles() ) ||
-			! array_intersect( $roles, $this->get_roles() )
-		) {
+		if ( empty( $this->get_roles() ) || ! array_intersect( $user->roles, $this->get_roles() ) ) {
 			$this->write_log(
 				array(
 					'event'       => 'sync',
-					'direction'   => $direction,
+					'direction'   => 'outgoing',
 					'user_email'  => $user->user_email,
 					'status'      => 'error',
 					'target_site' => $target_site,
-					'source_site' => $source_site,
+					'source_site' => $this->get_site_url(),
 					'message'     => 'User does not have the required role for sync.',
 					'payload'     => array(
 						'hook'       => current_filter(),
@@ -502,10 +489,6 @@ class Sync extends Base {
 			return;
 		}
 
-		if ( ! $this->allow_sync( $user_id ) ) {
-			return;
-		}
-
 		$this->sync_user( $user_id );
 	}
 
@@ -517,15 +500,6 @@ class Sync extends Base {
 	 * @param array  $old_roles Old roles.
 	 */
 	public function maybe_auto_sync_user_role( int $user_id, $role = null, $old_roles = null ): void {
-
-		if ( self::$is_syncing ) {
-			return;
-		}
-
-		if ( ! $this->allow_sync( $user_id ) ) {
-			return;
-		}
-		
 		$this->maybe_auto_sync_user( $user_id );
 	}
 
@@ -542,6 +516,10 @@ class Sync extends Base {
 		$results = array();
 
 		foreach ( $this->get_active_sites() as $site ) {
+
+			if ( ! $this->allow_sync( $user_id, $site['url']  ) ) {
+				continue;
+			}
 
 			$request_payload = $this->build_payload( $user, $site );
 			$response        = $this->send_request(
@@ -638,10 +616,6 @@ class Sync extends Base {
 			return;
 		}
 
-		if ( ! $this->allow_sync( $user_id ) ) {
-			return;
-		}
-
 		$user = get_userdata( $user_id );
 		if ( ! $user ) {
 			return;
@@ -661,6 +635,11 @@ class Sync extends Base {
 
 		$email = sanitize_email( $user->user_email );
 		foreach ( $this->get_active_sites() as $site ) {
+
+			if ( ! $this->allow_sync( $user->ID, $site['url']  ) ) {
+				continue;
+			}
+
 			$payload = array(
 				'email'       => $email,
 				'roles'       => empty( $user->roles ) ? array( 'none' ) : $user->roles,
@@ -851,9 +830,6 @@ class Sync extends Base {
 		if ( self::$is_syncing ) {
 			return;
 		}
-		if ( ! $this->allow_sync( $user->ID ) ) {
-			return;
-		}
 
 		$this->sync_password( $user, $new_pass );
 	}
@@ -868,9 +844,7 @@ class Sync extends Base {
 		if ( self::$is_syncing ) {
 			return;
 		}
-		if ( ! $this->allow_sync( $user_id ) ) {
-			return;
-		}
+
 		if ( $user_id ) {
 			$this->sync_password( $user_id, $password );
 		}
@@ -896,6 +870,11 @@ class Sync extends Base {
 		}
 
 		foreach ( $this->get_active_sites() as $site ) {
+
+			if ( ! $this->allow_sync( $user->ID, $site['url']  ) ) {
+				continue;
+			}
+
 			$payload = array(
 				'user_email'  => $user->user_email,
 				'user_pass'   => $password,
