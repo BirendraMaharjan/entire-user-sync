@@ -228,10 +228,10 @@ class Sync extends Base {
 		$site_url = isset( $site['url'] ) ? esc_url_raw( $site['url'] ) : '';
 
 		return trailingslashit( $site_url ) .
-		       'wp-json/' .
-		       trim( $this->get_route_namespace(), '/' ) .
-		       '/' .
-		       ltrim( sanitize_key( $route ), '/' );
+				'wp-json/' .
+				trim( $this->get_route_namespace(), '/' ) .
+				'/' .
+				ltrim( sanitize_key( $route ), '/' );
 	}
 
 	/**
@@ -278,11 +278,12 @@ class Sync extends Base {
 	/**
 	 * Decide whether the user should be synced outbound.
 	 *
-	 * @param int $user_id User ID.
+	 * @param int    $user_id     User ID.
+	 * @param string $target_site Site.
 	 *
 	 * @return bool True if allowed, false otherwise.
 	 */
-	public function allow_sync( int $user_id, $target_site = '' ): bool {
+	public function allow_sync( int $user_id, string $target_site = '' ): bool {
 		if ( ! $this->auto_sync() ) {
 			return false;
 		}
@@ -370,7 +371,7 @@ class Sync extends Base {
 
 			$user_login = substr( $base_login, 0, $max_length ) . $suffix_text;
 
-			++ $suffix;
+			++$suffix;
 		}
 
 		return $user_login;
@@ -455,8 +456,8 @@ class Sync extends Base {
 	 *
 	 * Only configured roles are allowed.
 	 *
-	 * @param int                  $user_id User ID.
-	 * @param array<int,mixed>     $roles   Remote roles.
+	 * @param int              $user_id User ID.
+	 * @param array<int,mixed> $roles   Remote roles.
 	 *
 	 * @return void
 	 */
@@ -475,7 +476,6 @@ class Sync extends Base {
 			$remote_roles,
 			$allowed_roles
 		);
-
 
 		$role = reset( $valid_roles );
 
@@ -529,7 +529,7 @@ class Sync extends Base {
 	 * @return array<string,mixed>|WP_Error
 	 */
 	public function send_request( string $endpoint, array $data, string $method = 'POST' ) {
-		$body      = wp_json_encode( $data );
+		$body = wp_json_encode( $data );
 
 		if ( false === $body ) {
 			return new WP_Error(
@@ -709,8 +709,8 @@ class Sync extends Base {
 	 * Passwords are intentionally not included here. Password changes are
 	 * synchronized through the wp_set_password hook.
 	 *
-	 * @param WP_User               $user User object.
-	 * @param array<string,mixed>   $site Site config.
+	 * @param WP_User             $user User object.
+	 * @param array<string,mixed> $site Site config.
 	 *
 	 * @return array<string,mixed> Payload.
 	 */
