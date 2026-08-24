@@ -188,5 +188,5 @@ import '../scss/backend.scss';
 			} );
 		} );
 
-	}( jQuery, entireAjax )
+	}( jQuery, entireUsBackendAjax )
 );
