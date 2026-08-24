@@ -272,6 +272,10 @@ class Sync extends Base {
 			return false;
 		}
 
+		if ( empty( $user->roles ) ) {
+			$user->roles = array( 'none' );
+		}
+
 		return ! empty( array_intersect( $user->roles, $allowed_roles ) );
 	}
 
