@@ -639,6 +639,16 @@ class Sync extends Base {
 	 * @param array  $old_roles Old roles.
 	 */
 	public function maybe_auto_sync_user_role( int $user_id, $role = null, $old_roles = null ): void {
+		if ( ! is_admin() ) {
+			return;
+		}
+
+		global $pagenow;
+
+		if ( 'users.php' !== $pagenow ) {
+			return;
+		}
+
 		$this->maybe_auto_sync_user( $user_id );
 	}
 
