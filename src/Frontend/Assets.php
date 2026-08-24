@@ -40,19 +40,37 @@ class Assets extends Base {
 	 * @since 1.0.0
 	 */
 	public function enqueue_assets(): void {
+		$asset_manifest = $this->plugin->plugin_path() . '/assets/build/frontend.asset.php';
+
+		$asset = file_exists( $asset_manifest ) ?
+			require $asset_manifest : array(
+				'dependencies' => array( 'jquery', 'wp-i18n' ),
+				'version'      => $this->plugin->version(),
+			);
+
 		wp_enqueue_style(
-			$this->plugin->slug(),
+			$this->plugin->slug() . '-frontend',
 			$this->plugin->url() . '/assets/build/frontend.css',
 			array(),
 			$this->plugin->version()
 		);
 
 		wp_enqueue_script(
-			$this->plugin->slug(),
+			$this->plugin->slug() . '-frontend',
 			$this->plugin->url() . '/assets/build/frontend.js',
-			array( 'wp-i18n' ),
+			$asset['dependencies'],
 			$this->plugin->version(),
 			true
+		);
+
+		// Localize script for AJAX.
+		wp_localize_script(
+			$this->plugin->slug() . '-frontend',
+			'entireUsAjax',
+			array(
+				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( 'entire_nonce' ),
+			)
 		);
 	}
 }

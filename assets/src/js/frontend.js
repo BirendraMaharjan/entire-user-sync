@@ -7,15 +7,15 @@
 import { __ } from '@wordpress/i18n';
 import '../scss/frontend.scss';
 
-( function ( $ ) {
+( function ( $, config ) {
 	'use strict';
 
 	// =========================================================================
 	// Constants
 	// =========================================================================
 
-	const AJAX_URL = entireAjax.ajaxUrl;
-	const NONCE    = entireAjax.nonce;
+	const AJAX_URL = config.ajaxUrl;
+	const NONCE    = config.nonce;
 
 	const CSS = {
 		// States
@@ -541,4 +541,4 @@ import '../scss/frontend.scss';
 		FormToggle.init();
 	} );
 
-} )( jQuery, wp.i18n );
+} )( jQuery, entireUsAjax, wp.i18n );

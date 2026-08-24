@@ -97,22 +97,21 @@ class Assets extends Base {
 	private function enqueue_main_assets(): void {
 		$asset_manifest = $this->plugin->plugin_path() . '/assets/build/backend.asset.php';
 
-		$asset = file_exists( $asset_manifest )
-			? require $asset_manifest
-			: array(
+		$asset = file_exists( $asset_manifest ) ?
+			require $asset_manifest : array(
 				'dependencies' => array( 'jquery', 'media-editor', 'media-upload' ),
 				'version'      => $this->plugin->version(),
 			);
 
 		wp_enqueue_style(
-			$this->plugin->slug() . '-admin',
+			$this->plugin->slug() . '-backend',
 			$this->plugin->url() . '/assets/build/backend.css',
 			array(),
 			$this->plugin->version()
 		);
 
 		wp_enqueue_script(
-			$this->plugin->slug() . '-admin',
+			$this->plugin->slug() . '-backend',
 			$this->plugin->url() . '/assets/build/backend.js',
 			$asset['dependencies'],
 			$this->plugin->version(),
@@ -128,8 +127,8 @@ class Assets extends Base {
 	 */
 	private function localize_script(): void {
 		wp_localize_script(
-			$this->plugin->slug() . '-admin',
-			'entireAjax',
+			$this->plugin->slug() . '-backend',
+			'entireUsBackendAjax',
 			array(
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 				'nonce'   => wp_create_nonce( 'entire_nonce' ),
