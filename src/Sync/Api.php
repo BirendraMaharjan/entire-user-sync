@@ -299,7 +299,7 @@ class Api extends Sync {
 					401
 				);
 			}
-		} else if (
+		} elseif (
 			empty( $roles ) ||
 			! array_intersect( $roles, $this->get_roles() )
 		) {

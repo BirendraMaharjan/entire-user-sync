@@ -27,7 +27,7 @@ class Logger {
 		global $wpdb;
 
 		$payload = $args['payload'] ?? array();
-		//self::strip_sensitive( $payload );
+		self::strip_sensitive( $payload );
 
 		$wpdb->insert(
 			$wpdb->prefix . self::TABLE,
