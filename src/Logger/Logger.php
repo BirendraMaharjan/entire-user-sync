@@ -106,24 +106,30 @@ class Logger {
 		$where_sql = $where ? 'WHERE ' . implode( ' AND ', $where ) : '';
 
 		if ( $values ) {
-			// Build and prepare count query. Table name is safe (built from $wpdb->prefix).
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- $table is built from $wpdb->prefix and $where_sql contains the placeholders corresponding to $values.
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $table is built from $wpdb->prefix and $where_sql contains the placeholders corresponding to $values.
 			$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `{$table}` {$where_sql}", ...$values ) );
 		} else {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table is built from $wpdb->prefix and internal constant.
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $table is built from $wpdb->prefix and internal constant.
 			$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `{$table}` {$where_sql}" );
 		}
 
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
-		// $table, $orderby and $order are validated above and safe to interpolate; placeholders in {$where_sql} and the LIMIT/OFFSET are prepared below.
-		$rows = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT * FROM `{$table}` {$where_sql} ORDER BY {$orderby} {$order} LIMIT %d OFFSET %d",
-				...array_merge( $values, array( $per_page, $offset ) )
-			),
-			ARRAY_A
-		);
-		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+
+		/*
+		 * $table, $orderby and $order are trusted internal values:
+		 * - $table is built from $wpdb->prefix and an internal constant.
+		 * - $orderby is restricted to $allowed_orderby.
+		 * - $order is restricted to ASC/DESC.
+		 *
+		 * $where_sql contains only internally defined SQL placeholders.
+		 * All values corresponding to those placeholders are passed to prepare().
+		 */
+		$query = "SELECT * FROM `{$table}` {$where_sql} ORDER BY {$orderby} {$order} LIMIT %d OFFSET %d";
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Dynamic identifiers are validated above; $where_sql contains only internal placeholders and values are passed to prepare().
+		$query = $wpdb->prepare( $query, ...array_merge( $values, array( $per_page, $offset ) ) );
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $query has been prepared above; dynamic identifiers are validated and all values are prepared.
+		$rows = $wpdb->get_results( $query, ARRAY_A );
 
 		return array(
 			'rows'  => $rows ? $rows : array(),

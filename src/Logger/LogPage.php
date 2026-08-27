@@ -19,7 +19,7 @@ use EntireUserSync\Common\Abstracts\Base;
 class LogPage extends Base {
 
 	private const MENU_SLUG_SUFFIX = '-logs';
-	private const DEFAULT_PER_PAGE = 50;
+	private const DEFAULT_PER_PAGE = 2;
 	private const PRUNE_ACTION     = 'entireus_prune_logs';
 
 	private const EVENT_BADGES = array(
@@ -158,20 +158,32 @@ class LogPage extends Base {
 			return;
 		}
 
-		$query = array_filter( array_diff_key( $filters, array_flip( array( 'page', 'per_page' ) ) ) );
-		echo '<div class="tablenav"><div class="tablenav-pages">';
+		$query = array_filter(
+			array_diff_key(
+				$filters,
+				array_flip( array( 'page', 'paged', 'per_page' ) )
+			)
+		);
 
-		for ( $i = 1; $i <= $pages; $i++ ) {
-			$url = add_query_arg( array_merge( $query, array( 'paged' => $i ) ), $base_url );
+		$base_url = add_query_arg( $query, $base_url );
 
-			if ( $i === $page ) {
-				echo '<span class="current">' . esc_html( $i ) . '</span> ';
-			} else {
-				echo '<a href="' . esc_url( $url ) . '">' . esc_html( $i ) . '</a> ';
-			}
+		$pagination = paginate_links(
+			array(
+				'base'      => add_query_arg( 'paged', '%#%', $base_url ),
+				'format'    => '',
+				'current'   => $page,
+				'total'     => $pages,
+				'type'      => 'plain',
+				'prev_text' => '&lsaquo;',
+				'next_text' => '&rsaquo;',
+			)
+		);
+
+		if ( $pagination ) {
+			echo '<div class="tablenav"><div class="tablenav-pages">';
+			echo wp_kses_post( $pagination );
+			echo '</div></div>';
 		}
-
-		echo '</div></div>';
 	}
 
 	/**
