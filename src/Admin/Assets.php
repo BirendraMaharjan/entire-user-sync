@@ -69,14 +69,14 @@ class Assets extends Base {
 
 		wp_enqueue_style(
 			$this->plugin->slug() . '-select2',
-			'https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css',
+			$this->plugin->url() . '/assets/lib/select2/css/select2.min.css',
 			array(),
 			'4.1.0'
 		);
 
 		wp_enqueue_script(
 			$this->plugin->slug() . '-select2',
-			'https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js',
+			$this->plugin->url() . '/assets/lib/select2/js/select2.min.js',
 			array( 'jquery' ),
 			'4.1.0',
 			true

@@ -2,7 +2,7 @@
 Contributors: aegkr
 Tags: User Sync, Sync User Data
 Requires at least: 6.0
-Tested up to: 7.0
+Tested up to: 7.1
 Stable tag: 1.0.0
 License: GPL v2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -44,7 +44,7 @@ Compiled production assets are located in:
 
 = Build & Development =
 
-The JavaScript and CSS files in the `assets/build/` directory are generated from the source files in `assets/js/` and `assets/scss/` using WordPress Scripts and Webpack.
+The JavaScript and CSS files in the `assets/build/` directory are generated from the source files in `assets/src/js/` and `assets/src/scss/` using WordPress Scripts and Webpack.
 
 **Build Tools:**
 
@@ -65,6 +65,12 @@ The JavaScript and CSS files in the `assets/build/` directory are generated from
 3. Watch for development changes:
 
 `npm start`
+
+= Third-Party Libraries =
+
+[Select2](https://github.com/select2/select2)
+Copyright (c) 2012-2017 Kevin Brown, Igor Vaynberg, and Select2 contributors
+Licensed under the MIT License (MIT).
 
 == Screenshots ==
 

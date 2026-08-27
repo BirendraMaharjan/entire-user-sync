@@ -8,10 +8,12 @@
  * Author URI:        https://www.linkedin.com/in/birendramaharjan/
  * Text Domain:       entire-user-sync
  * Domain Path:       /languages
+ * License: GPL v2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  *
- * @package EntireUserSync
- * @author  Birendra Maharjan
  * @version 1.0.0
+ * @author  Birendra Maharjan
+ * @package EntireUserSync
  */
 
 defined( 'ABSPATH' ) || exit;

@@ -181,17 +181,15 @@ class Configuration {
 			'community-events-location',
 		);
 
-		$where_fragments = array_map(
-			fn( $p ) => $wpdb->prepare( 'meta_key NOT LIKE %s', $p ),
-			$skip_patterns
+		$placeholders = implode( ' AND ', array_fill( 0, count( $skip_patterns ), 'meta_key NOT LIKE %s' ) );
+
+
+		$sql = $wpdb->prepare(
+			'SELECT DISTINCT meta_key FROM ' . $wpdb->usermeta . ' WHERE ' . $placeholders . ' ORDER BY meta_key ASC', // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+			...$skip_patterns
 		);
 
-		$where = implode( ' AND ', $where_fragments );
-		$where = '' !== $where ? 'WHERE ' . $where : '';
-
-		$sql = 'SELECT DISTINCT meta_key FROM ' . $wpdb->usermeta . ' ' . $where . ' ORDER BY meta_key ASC';
-
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $where_fragments are prepared before use.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct query is required to retrieve distinct user meta keys; the query runs only in the admin configuration.
 		$keys = $wpdb->get_col( $sql );
 
 		if ( empty( $keys ) ) {
