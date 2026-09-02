@@ -116,4 +116,97 @@
 }
 
 
+/* ==========================================================================
+   Popup
+========================================================================== */
+.entire-popup-container {
+	position: fixed;
+	top: 35px;
+	right: 20px;
+	z-index: 9999;
+}
+
+.entire-popup {
+	background: #333;
+	color: #fff;
+	padding: 12px 18px;
+	margin-bottom: 10px;
+	border-radius: 4px;
+	opacity: 0;
+	transform: translateY(-10px);
+	transition: all .3s;
+
+	&.show {
+		opacity: 1;
+		transform: translateY(0);
+		animation: shake 3s infinite;
+	}
+
+	&.success {
+		background: #2e7d32;
+	}
+
+	&.error {
+		background: #c62828;
+	}
+}
+
+/* ==========================================================================
+   Popup Modal
+========================================================================== */
+.entire-modal-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, .5);
+	display: none;
+	align-items: center;
+	justify-content: center;
+	z-index: -1;
+
+	&.entire-active {
+		z-index: 9999;
+		display: flex;
+	}
+
+	.entire-modal {
+		background: #fff;
+		border-radius: 6px;
+		padding: 20px 24px;
+		max-width: 700px;
+		width: 90%;
+		max-height: 80vh;
+		overflow: auto;
+		position: relative;
+	}
+
+	.entire-modal-close {
+		position: absolute;
+		right: 12px;
+		top: 10px;
+		border: none;
+		background: none;
+		font-size: 22px;
+		cursor: pointer;
+	}
+
+	.entire-modal-body {
+		white-space: pre-wrap;
+		word-break: break-all;
+		margin-top: 10px;
+		margin-bottom: 20px;
+	}
+
+	.entire-modal-ok {
+		background: #2271b1;
+		color: #fff;
+		border: none;
+		padding: 8px 20px;
+		border-radius: 4px;
+		cursor: pointer;
+	}
+}
+
+
+
+
 

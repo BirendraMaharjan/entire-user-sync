@@ -1,1 +1,564 @@
-(()=>{"use strict";const e=window.wp.i18n;!function(t,s){const n=s.ajaxUrl,a=s.nonce,o={ERROR:"entire-error",SUCCESS:"entire-success",LOADING:"entire-loading",ACTIVE:"active",SHOW:"show",HIDE:"entire-hide",POPUP_CONTAINER:"entire-popup-container",POPUP:"entire-popup",MODAL_OVERLAY:"entire-modal-overlay",MODAL:"entire-modal",MODAL_CLOSE:"entire-modal-close",MODAL_OK:"entire-modal-ok",MODAL_MESSAGE:"entire-modal-message",FORM:"entire-form",FORM_CONTAINER:"entire-form-container",MESSAGE:"entire-message",VALIDATION_MESSAGE:"entire-validation-message",PASSWORD_STRENGTH_BAR:"entire-password-strength-bar",RESEND_VERIFICATION:"entire-resend-verification",LOST_PASSWORD:"entire-lost-password",BACK_TO_LOGIN:"entire-back-to-login",LOGIN_LINK:"entire-login-link",LOST_PW_CONTAINER:"entire-lost-password-form-container",LOGIN_CONTAINER:"entire-login-form-container",RESET_PW_CONTAINER:"entire-reset-password-form-container"},i=Object.fromEntries(Object.entries(o).map(([e,t])=>[e,`.${t}`])),r={debounce(e,t){let s;return function(...n){clearTimeout(s),s=setTimeout(()=>e.apply(this,n),t)}},ajax:(e,s={})=>t.ajax({url:n,type:"POST",data:{action:e,nonce:a,...s}}),scrollTo(e,s=150){e.length&&e.offset()&&t("html, body").stop().animate({scrollTop:e.offset().top-s},500)}},c={show(e,s="success"){let n=t(i.POPUP_CONTAINER);n.length||(n=t(`<div class="${o.POPUP_CONTAINER}"></div>`).appendTo("body"));const a=t(`<div class="${o.POPUP} ${s}">${e}</div>`).appendTo(n);setTimeout(()=>a.addClass(o.SHOW),10),setTimeout(()=>{a.removeClass(o.SHOW),setTimeout(()=>a.remove(),5e3)},1e4)}},d={show(e,s="success"){t(i.MODAL_OVERLAY).length||t(`\n\t\t\t\t\t<div class="${o.MODAL_OVERLAY}">\n\t\t\t\t\t\t<div class="${o.MODAL}">\n\t\t\t\t\t\t\t<button class="${o.MODAL_CLOSE}">×</button>\n\t\t\t\t\t\t\t<div class="entire-modal-icon"></div>\n\t\t\t\t\t\t\t<div class="${o.MODAL_MESSAGE}"></div>\n\t\t\t\t\t\t\t<button class="${o.MODAL_OK}">OK</button>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t`).appendTo("body"),t(i.MODAL).removeClass(`${o.SUCCESS} ${o.ERROR}`).addClass(s),t(i.MODAL_MESSAGE).text(e),t(i.MODAL_OVERLAY).addClass(o.ACTIVE).fadeIn(200)},close(){t(i.MODAL_OVERLAY).removeClass(o.ACTIVE).fadeOut(200)},init(){t(document).on("click",i.MODAL_CLOSE,d.close).on("click",i.MODAL_OK,d.close).on("click",i.MODAL_OVERLAY,function(e){t(e.target).is(i.MODAL_OVERLAY)&&d.close()})}},l={init(){t(document).on("input","[data-validate]",r.debounce(l._onFieldInput,400)).on("input",'[data-validate="password"]',r.debounce(l._onPasswordInput,400)).on("click",i.RESEND_VERIFICATION,r.debounce(l._onResendVerification,400))},_onFieldInput(){const e=t(this),s=e.data("validate"),n=e.val().trim(),a=e.siblings(i.VALIDATION_MESSAGE);if(!n)return e.removeClass(`${o.ERROR} ${o.SUCCESS}`),void a.removeClass(`${o.ERROR} ${o.SUCCESS}`).text("");e.addClass(o.LOADING),r.ajax(`entire_validate_${s}`,{[s]:n}).then(t=>{const s=t?.success;e.removeClass(o.LOADING).removeClass(s?o.ERROR:o.SUCCESS).addClass(s?o.SUCCESS:o.ERROR),a.removeClass(s?o.ERROR:o.SUCCESS).addClass(s?o.SUCCESS:o.ERROR).text(t?.data?.message??"")}).catch(()=>{e.removeClass(o.LOADING)})},_onPasswordInput(){const e=t(this).val(),s=t(i.PASSWORD_STRENGTH_BAR);if(!e)return void s.attr("data-strength",0).css("width",0);let n=0;e.length>=8&&n++,e.length>=12&&n++,/[a-z]/.test(e)&&/[A-Z]/.test(e)&&n++,/\d/.test(e)&&n++,/[^a-zA-Z\d]/.test(e)&&n++,s.attr("data-strength",Math.min(n,4))},_onResendVerification(s){s.preventDefault();const n=t(this),a=n.data("email");n.prop("disabled",!0).text((0,e.__)("Sending...","entire-account-manager")),r.ajax("entire_resend_verification",{email:a}).then(t=>{t?.success?(c.show(t.data.message,"success"),n.text((0,e.__)("Email Sent!","entire-account-manager"))):(c.show(t?.data?.message,"error"),n.prop("disabled",!1).text((0,e.__)("Resend Verification Email","entire-account-manager")))}).catch(()=>{c.show((0,e.__)("An error occurred. Please try again.","entire-account-manager"),"error"),n.prop("disabled",!1).text((0,e.__)("Resend Verification Email","entire-account-manager"))})}},O={init(){t(document).on("submit",i.FORM,O._onSubmit)},async _onSubmit(s){s.preventDefault();const o=t(this),c=o.closest(i.FORM_CONTAINER),d=c.find('button[type="submit"]'),l=o.serialize()+"&action=entire_send_form&type="+encodeURIComponent(o.data("type"))+"&nonce="+a;O._setLoading(c,d,!0);const E=O._getMessageContainer(c);try{const s=await t.ajax({url:n,type:"POST",data:l});s?.success?(O._showMessage(E,s.data?.message||(0,e.__)("Success!","entire-account-manager"),"success"),o[0].reset(),t(i.PASSWORD_STRENGTH_BAR).attr("data-strength","0")):s?.data?.errors?O._applyFieldErrors(o,E,s.data.errors):O._showMessage(E,s?.data?.message||(0,e.__)("An unexpected error occurred.","entire-account-manager"),"error")}catch(t){O._showMessage(E,(0,e.__)("An error occurred. Please try again.","entire-account-manager"),"error")}finally{O._setLoading(c,d,!1),r.scrollTo(c.find(`${i.MESSAGE}, ${i.ERROR}`).first())}},_setLoading(e,t,s){t.prop("disabled",s).toggleClass(o.LOADING,s),s&&(e.find(`${i.MESSAGE}, ${i.VALIDATION_MESSAGE}`).removeClass(`${o.ERROR} ${o.SUCCESS}`).text(""),e.find(`${i.ERROR}, ${i.SUCCESS}`).removeClass(`${o.ERROR} ${o.SUCCESS}`))},_getMessageContainer(e){let s=e.find(i.MESSAGE);return s.length||(s=t(`<div class="${o.MESSAGE}"></div>`).prependTo(e)),s},_showMessage(e,t,s){e.addClass("success"===s?o.SUCCESS:o.ERROR).html(`<p>${t}</p>`)},_applyFieldErrors(e,t,s){Object.entries(s).forEach(([s,n])=>{const a=e.find(`[name="${s}"]`);a.length?a.addClass(o.ERROR).closest("div").find(i.VALIDATION_MESSAGE).addClass(o.ERROR).text(n):O._showMessage(t,n,"error")})}},E={init(){},_autoDismiss(){t(`${i.MESSAGE}.${o.SUCCESS}`).each(function(){const e=t(this);setTimeout(()=>{e.fadeOut(300,function(){t(this).remove()})},1e4)})}},S={init(){t(document).on("click",i.LOST_PASSWORD,e=>{e.preventDefault(),S.toggle(!0)}).on("click",i.BACK_TO_LOGIN,e=>{e.preventDefault(),S.toggle(!1)}).on("click",i.LOGIN_LINK,e=>{e.preventDefault(),S.toggle(!1)})},toggle(e){t(i.LOST_PW_CONTAINER).toggleClass(o.HIDE,!e),t(i.LOGIN_CONTAINER).toggleClass(o.HIDE,e),t(i.RESET_PW_CONTAINER).toggleClass(o.HIDE,e)}};t(document).ready(()=>{l.init(),O.init(),E.init(),d.init(),S.init()})}(jQuery,entireUsAjax,wp.i18n)})();
+/******/ (() => { // webpackBootstrap
+/******/ 	"use strict";
+/******/ 	var __webpack_modules__ = ({
+
+/***/ "./assets/src/scss/frontend.scss"
+/*!***************************************!*\
+  !*** ./assets/src/scss/frontend.scss ***!
+  \***************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+// extracted by mini-css-extract-plugin
+
+
+/***/ },
+
+/***/ "@wordpress/i18n"
+/*!******************************!*\
+  !*** external ["wp","i18n"] ***!
+  \******************************/
+(module) {
+
+module.exports = window["wp"]["i18n"];
+
+/***/ }
+
+/******/ 	});
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 		if (cachedModule !== undefined) {
+/******/ 			return cachedModule.exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			// no module.id needed
+/******/ 			// no module.loaded needed
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		if (!(moduleId in __webpack_modules__)) {
+/******/ 			delete __webpack_module_cache__[moduleId];
+/******/ 			var e = new Error("Cannot find module '" + moduleId + "'");
+/******/ 			e.code = 'MODULE_NOT_FOUND';
+/******/ 			throw e;
+/******/ 		}
+/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/compat get default export */
+/******/ 	(() => {
+/******/ 		// getDefaultExport function for compatibility with non-harmony modules
+/******/ 		__webpack_require__.n = (module) => {
+/******/ 			var getter = module && module.__esModule ?
+/******/ 				() => (module['default']) :
+/******/ 				() => (module);
+/******/ 			__webpack_require__.d(getter, { a: getter });
+/******/ 			return getter;
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__webpack_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__webpack_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/************************************************************************/
+var __webpack_exports__ = {};
+// This entry needs to be wrapped in an IIFE because it needs to be isolated against other modules in the chunk.
+(() => {
+/*!***********************************!*\
+  !*** ./assets/src/js/frontend.js ***!
+  \***********************************/
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @wordpress/i18n */ "@wordpress/i18n");
+/* harmony import */ var _wordpress_i18n__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _scss_frontend_scss__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../scss/frontend.scss */ "./assets/src/scss/frontend.scss");
+/**
+ * VI Account Manager Scripts
+ *
+ * @package EntireAccountManager
+ * @since   1.0.0
+ */
+
+
+(function ($, config) {
+  'use strict';
+
+  // =========================================================================
+  // Constants
+  // =========================================================================
+  const AJAX_URL = config.ajaxUrl;
+  const NONCE = config.nonce;
+  const CSS = {
+    // States
+    ERROR: 'entire-error',
+    SUCCESS: 'entire-success',
+    LOADING: 'entire-loading',
+    ACTIVE: 'active',
+    SHOW: 'show',
+    HIDE: 'entire-hide',
+    // Components
+    POPUP_CONTAINER: 'entire-popup-container',
+    POPUP: 'entire-popup',
+    MODAL_OVERLAY: 'entire-modal-overlay',
+    MODAL: 'entire-modal',
+    MODAL_CLOSE: 'entire-modal-close',
+    MODAL_OK: 'entire-modal-ok',
+    MODAL_MESSAGE: 'entire-modal-message',
+    FORM: 'entire-form',
+    FORM_CONTAINER: 'entire-form-container',
+    MESSAGE: 'entire-message',
+    VALIDATION_MESSAGE: 'entire-validation-message',
+    PASSWORD_STRENGTH_BAR: 'entire-password-strength-bar',
+    RESEND_VERIFICATION: 'entire-resend-verification',
+    LOST_PASSWORD: 'entire-lost-password',
+    BACK_TO_LOGIN: 'entire-back-to-login',
+    LOGIN_LINK: 'entire-login-link',
+    LOST_PW_CONTAINER: 'entire-lost-password-form-container',
+    LOGIN_CONTAINER: 'entire-login-form-container',
+    RESET_PW_CONTAINER: 'entire-reset-password-form-container'
+  };
+
+  // Build selector map from CSS class map (e.g. CSS.ERROR -> SEL.ERROR = '.entire-error')
+  const SEL = Object.fromEntries(Object.entries(CSS).map(([key, val]) => [key, `.${val}`]));
+
+  // =========================================================================
+  // Utils
+  // =========================================================================
+
+  const Utils = {
+    /**
+     * Delay execution until a function stops being called.
+     *
+     * @param {Function} fn
+     * @param {number}   delay  Milliseconds.
+     * @return {Function}
+     */
+    debounce(fn, delay) {
+      let timer;
+      return function (...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), delay);
+      };
+    },
+    /**
+     * Post data to the WP AJAX endpoint and return a Promise.
+     *
+     * @param {string} action
+     * @param {Object} data
+     * @return {Promise}
+     */
+    ajax(action, data = {}) {
+      return $.ajax({
+        url: AJAX_URL,
+        type: 'POST',
+        data: {
+          action,
+          nonce: NONCE,
+          ...data
+        }
+      });
+    },
+    /**
+     * Scroll the viewport to an element with an optional offset.
+     *
+     * @param {jQuery} $el
+     * @param {number} offset  Pixels from the top. Default 150.
+     */
+    scrollTo($el, offset = 150) {
+      if ($el.length && $el.offset()) {
+        $('html, body').stop().animate({
+          scrollTop: $el.offset().top - offset
+        }, 500);
+      }
+    }
+  };
+
+  // =========================================================================
+  // Popup (toast notifications)
+  // =========================================================================
+
+  const Popup = {
+    /**
+     * Display a transient toast notification.
+     *
+     * @param {string} message
+     * @param {string} type  'success' | 'error'
+     */
+    show(message, type = 'success') {
+      let $container = $(SEL.POPUP_CONTAINER);
+      if (!$container.length) {
+        $container = $(`<div class="${CSS.POPUP_CONTAINER}"></div>`).appendTo('body');
+      }
+      const $popup = $(`<div class="${CSS.POPUP} ${type}">${message}</div>`).appendTo($container);
+      setTimeout(() => $popup.addClass(CSS.SHOW), 10);
+      setTimeout(() => {
+        $popup.removeClass(CSS.SHOW);
+        setTimeout(() => $popup.remove(), 5000);
+      }, 10000);
+    }
+  };
+
+  // =========================================================================
+  // Modal (blocking dialog)
+  // =========================================================================
+
+  const Modal = {
+    /**
+     * Display a blocking modal dialog.
+     *
+     * @param {string} message
+     * @param {string} type  'success' | 'error'
+     */
+    show(message, type = 'success') {
+      if (!$(SEL.MODAL_OVERLAY).length) {
+        $(`
+					<div class="${CSS.MODAL_OVERLAY}">
+						<div class="${CSS.MODAL}">
+							<button class="${CSS.MODAL_CLOSE}">×</button>
+							<div class="entire-modal-icon"></div>
+							<div class="${CSS.MODAL_MESSAGE}"></div>
+							<button class="${CSS.MODAL_OK}">OK</button>
+						</div>
+					</div>
+				`).appendTo('body');
+      }
+      $(SEL.MODAL).removeClass(`${CSS.SUCCESS} ${CSS.ERROR}`).addClass(type);
+      $(SEL.MODAL_MESSAGE).text(message);
+      $(SEL.MODAL_OVERLAY).addClass(CSS.ACTIVE).fadeIn(200);
+    },
+    /**
+     * Close the modal dialog.
+     */
+    close() {
+      $(SEL.MODAL_OVERLAY).removeClass(CSS.ACTIVE).fadeOut(200);
+    },
+    /**
+     * Bind modal events.
+     */
+    init() {
+      $(document).on('click', SEL.MODAL_CLOSE, Modal.close).on('click', SEL.MODAL_OK, Modal.close).on('click', SEL.MODAL_OVERLAY, function (e) {
+        if ($(e.target).is(SEL.MODAL_OVERLAY)) {
+          Modal.close();
+        }
+      });
+    }
+  };
+
+  // =========================================================================
+  // FormValidator
+  // =========================================================================
+
+  const FormValidator = {
+    /**
+     * Attach validation event listeners.
+     */
+    init() {
+      $(document).on('input', '[data-validate]', Utils.debounce(FormValidator._onFieldInput, 400)).on('input', '[data-validate="password"]', Utils.debounce(FormValidator._onPasswordInput, 400)).on('click', SEL.RESEND_VERIFICATION, Utils.debounce(FormValidator._onResendVerification, 400));
+    },
+    /**
+     * Validate a single field via AJAX.
+     *
+     * @private
+     */
+    _onFieldInput() {
+      const $field = $(this);
+      const type = $field.data('validate');
+      const value = $field.val().trim();
+      const $message = $field.siblings(SEL.VALIDATION_MESSAGE);
+      if (!value) {
+        $field.removeClass(`${CSS.ERROR} ${CSS.SUCCESS}`);
+        $message.removeClass(`${CSS.ERROR} ${CSS.SUCCESS}`).text('');
+        return;
+      }
+      $field.addClass(CSS.LOADING);
+      Utils.ajax(`entire_validate_${type}`, {
+        [type]: value
+      }).then(response => {
+        const ok = response?.success;
+        $field.removeClass(CSS.LOADING).removeClass(ok ? CSS.ERROR : CSS.SUCCESS).addClass(ok ? CSS.SUCCESS : CSS.ERROR);
+        $message.removeClass(ok ? CSS.ERROR : CSS.SUCCESS).addClass(ok ? CSS.SUCCESS : CSS.ERROR).text(response?.data?.message ?? '');
+      }).catch(() => {
+        $field.removeClass(CSS.LOADING);
+      });
+    },
+    /**
+     * Update the password-strength bar.
+     *
+     * @private
+     */
+    _onPasswordInput() {
+      const password = $(this).val();
+      const $strengthBar = $(SEL.PASSWORD_STRENGTH_BAR);
+      if (!password) {
+        $strengthBar.attr('data-strength', 0).css('width', 0);
+        return;
+      }
+      let strength = 0;
+      if (password.length >= 8) {
+        strength++;
+      }
+      if (password.length >= 12) {
+        strength++;
+      }
+      if (/[a-z]/.test(password) && /[A-Z]/.test(password)) {
+        strength++;
+      }
+      if (/\d/.test(password)) {
+        strength++;
+      }
+      if (/[^a-zA-Z\d]/.test(password)) {
+        strength++;
+      }
+      $strengthBar.attr('data-strength', Math.min(strength, 4));
+    },
+    /**
+     * Resend the email-verification link.
+     *
+     * @private
+     * @param {Event} e
+     */
+    _onResendVerification(e) {
+      e.preventDefault();
+      const $button = $(this);
+      const email = $button.data('email');
+      $button.prop('disabled', true).text((0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Sending...', 'entire-account-manager'));
+      Utils.ajax('entire_resend_verification', {
+        email
+      }).then(response => {
+        if (response?.success) {
+          Popup.show(response.data.message, 'success');
+          $button.text((0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Email Sent!', 'entire-account-manager'));
+        } else {
+          Popup.show(response?.data?.message, 'error');
+          $button.prop('disabled', false).text((0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Resend Verification Email', 'entire-account-manager'));
+        }
+      }).catch(() => {
+        Popup.show((0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('An error occurred. Please try again.', 'entire-account-manager'), 'error');
+        $button.prop('disabled', false).text((0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Resend Verification Email', 'entire-account-manager'));
+      });
+    }
+  };
+
+  // =========================================================================
+  // FormSubmission
+  // =========================================================================
+
+  const FormSubmission = {
+    /**
+     * Attach form-submit event listener.
+     */
+    init() {
+      $(document).on('submit', SEL.FORM, FormSubmission._onSubmit);
+    },
+    /**
+     * Handle form submission.
+     *
+     * @private
+     * @param {Event} e
+     */
+    async _onSubmit(e) {
+      e.preventDefault();
+      const $form = $(this);
+      const $container = $form.closest(SEL.FORM_CONTAINER);
+      const $button = $container.find('button[type="submit"]');
+
+      // Build post body – encodeURIComponent guards special chars in 'type'
+      const formData = $form.serialize() + '&action=entire_send_form' + '&type=' + encodeURIComponent($form.data('type')) + '&nonce=' + NONCE;
+      FormSubmission._setLoading($container, $button, true);
+      const $msg = FormSubmission._getMessageContainer($container);
+      try {
+        const response = await $.ajax({
+          url: AJAX_URL,
+          type: 'POST',
+          data: formData
+        });
+        if (response?.success) {
+          FormSubmission._showMessage($msg, response.data?.message || (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Success!', 'entire-account-manager'), 'success');
+          $form[0].reset();
+          $(SEL.PASSWORD_STRENGTH_BAR).attr('data-strength', '0');
+        } else if (response?.data?.errors) {
+          FormSubmission._applyFieldErrors($form, $msg, response.data.errors);
+        } else {
+          FormSubmission._showMessage($msg, response?.data?.message || (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('An unexpected error occurred.', 'entire-account-manager'), 'error');
+        }
+      } catch (err) {
+        FormSubmission._showMessage($msg, (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('An error occurred. Please try again.', 'entire-account-manager'), 'error');
+      } finally {
+        FormSubmission._setLoading($container, $button, false);
+        Utils.scrollTo($container.find(`${SEL.MESSAGE}, ${SEL.ERROR}`).first());
+      }
+    },
+    // ---- Private helpers ------------------------------------------------
+
+    /**
+     * Toggle the loading state on the submit button.
+     * Clears all feedback messages when entering the loading state.
+     *
+     * @param {jQuery}  $container
+     * @param {jQuery}  $button
+     * @param {boolean} loading
+     */
+    _setLoading($container, $button, loading) {
+      $button.prop('disabled', loading).toggleClass(CSS.LOADING, loading);
+      if (loading) {
+        $container.find(`${SEL.MESSAGE}, ${SEL.VALIDATION_MESSAGE}`).removeClass(`${CSS.ERROR} ${CSS.SUCCESS}`).text('');
+        $container.find(`${SEL.ERROR}, ${SEL.SUCCESS}`).removeClass(`${CSS.ERROR} ${CSS.SUCCESS}`);
+      }
+    },
+    /**
+     * Return (or lazily create) the shared message container.
+     *
+     * @param  {jQuery} $container
+     * @return {jQuery}
+     */
+    _getMessageContainer($container) {
+      let $msg = $container.find(SEL.MESSAGE);
+      if (!$msg.length) {
+        $msg = $(`<div class="${CSS.MESSAGE}"></div>`).prependTo($container);
+      }
+      return $msg;
+    },
+    /**
+     * Render a success or error message into the shared message element.
+     *
+     * @param {jQuery} $msg
+     * @param {string} text
+     * @param {string} type  'success' | 'error'
+     */
+    _showMessage($msg, text, type) {
+      $msg.addClass(type === 'success' ? CSS.SUCCESS : CSS.ERROR).html(`<p>${text}</p>`);
+    },
+    /**
+     * Map server-side field errors onto their matching inputs.
+     * Falls back to the shared message container for unknown fields.
+     *
+     * @param {jQuery} $form
+     * @param {jQuery} $msg
+     * @param {Object} errors  { fieldName: 'Error text', … }
+     */
+    _applyFieldErrors($form, $msg, errors) {
+      Object.entries(errors).forEach(([field, message]) => {
+        const $field = $form.find(`[name="${field}"]`);
+        if ($field.length) {
+          $field.addClass(CSS.ERROR).closest('div').find(SEL.VALIDATION_MESSAGE).addClass(CSS.ERROR).text(message);
+        } else {
+          FormSubmission._showMessage($msg, message, 'error');
+        }
+      });
+    }
+  };
+
+  // =========================================================================
+  // MessageHandler
+  // =========================================================================
+
+  const MessageHandler = {
+    /**
+     * Initialise message behaviour.
+     * Auto-dismiss is disabled by default; uncomment _autoDismiss() to enable.
+     */
+    init() {
+      // this._autoDismiss();
+    },
+    /**
+     * Fade out and remove success messages after a delay.
+     *
+     * @private
+     */
+    _autoDismiss() {
+      $(`${SEL.MESSAGE}.${CSS.SUCCESS}`).each(function () {
+        const $message = $(this);
+        setTimeout(() => {
+          $message.fadeOut(300, function () {
+            $(this).remove();
+          });
+        }, 10000);
+      });
+    }
+  };
+
+  // =========================================================================
+  // FormToggle
+  // =========================================================================
+
+  const FormToggle = {
+    /**
+     * Bind toggle-link click events.
+     */
+    init() {
+      $(document).on('click', SEL.LOST_PASSWORD, e => {
+        e.preventDefault();
+        FormToggle.toggle(true);
+      }).on('click', SEL.BACK_TO_LOGIN, e => {
+        e.preventDefault();
+        FormToggle.toggle(false);
+      }).on('click', SEL.LOGIN_LINK, e => {
+        e.preventDefault();
+        FormToggle.toggle(false);
+      });
+    },
+    /**
+     * Switch between the forgotten-password panel and the login panel.
+     *
+     * @param {boolean} showForgotten  True → show forgotten-password view.
+     */
+    toggle(showForgotten) {
+      $(SEL.LOST_PW_CONTAINER).toggleClass(CSS.HIDE, !showForgotten);
+      $(SEL.LOGIN_CONTAINER).toggleClass(CSS.HIDE, showForgotten);
+      $(SEL.RESET_PW_CONTAINER).toggleClass(CSS.HIDE, showForgotten);
+    }
+  };
+
+  // =========================================================================
+  // Bootstrap
+  // =========================================================================
+
+  $(document).ready(() => {
+    FormValidator.init();
+    FormSubmission.init();
+    MessageHandler.init();
+    Modal.init();
+    FormToggle.init();
+  });
+})(jQuery, entireUsAjax, wp.i18n);
+})();
+
+/******/ })()
+;
+//# sourceMappingURL=frontend.js.map
