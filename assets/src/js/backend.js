@@ -92,9 +92,9 @@ import '../scss/backend.scss';
 
 			const frame = wp.media( {
 				title: config.i18n.uploadTitle,
-				button: {text: config.i18n.uploadBtn},
+				button: { text: config.i18n.uploadBtn },
 				multiple: false,
-				library: {type: 'image'},
+				library: { type: 'image' },
 			} );
 
 			frame.on( 'select', function () {
@@ -151,10 +151,10 @@ import '../scss/backend.scss';
 					} );
 				} else if ( subField.type === 'textarea' ) {
 					$input = $( '<textarea></textarea>' )
-						.attr( {name: name, rows: subField.rows || 3, placeholder: subField.placeholder || ''} )
+						.attr( { name: name, rows: subField.rows || 3, placeholder: subField.placeholder || '' } )
 						.addClass( 'large-text' );
 				} else if ( subField.type === 'checkbox' ) {
-					$input = $( '<input />' ).attr( {type: 'checkbox', name: name, value: '1'} );
+					$input = $( '<input />' ).attr( { type: 'checkbox', name: name, value: '1' } );
 				} else {
 					$input = $( '<input />' ).attr( {
 						type: subField.type || 'text',
@@ -190,3 +190,281 @@ import '../scss/backend.scss';
 
 	}( jQuery, entireUsBackendAjax )
 );
+
+
+(
+	function ( $, config, i18n ) {
+		'use strict';
+
+		// =========================================================================
+		// Constants
+		// =========================================================================
+
+		const AJAX_URL = config.ajaxUrl;
+		const NONCE = config.nonce;
+
+		const CSS = {
+			// States
+			ERROR: 'entire-error',
+			SUCCESS: 'entire-success',
+			LOADING: 'entire-loading',
+			ACTIVE: 'entire-active',
+			SHOW: 'entire-show',
+			HIDE: 'entire-hide',
+
+			// Components
+			POPUP_CONTAINER: 'entire-popup-container',
+			POPUP: 'entire-popup',
+			MODAL_OVERLAY: 'entire-modal-overlay',
+			MODAL: 'entire-modal',
+			MODAL_CLOSE: 'entire-modal-close',
+			MODAL_OK: 'entire-modal-ok',
+			MODAL_BODY: 'entire-modal-body',
+		};
+
+		// Build selector map from CSS class map (e.g. CSS.ERROR -> SEL.ERROR = '.entire-error')
+		const SEL = Object.fromEntries(
+			Object.entries( CSS ).map(
+				( [ key, val ] ) => [ key, `.${ val }` ]
+			)
+		);
+
+		// =========================================================================
+		// Utils
+		// =========================================================================
+
+		const Utils = {
+			/**
+			 * Delay execution until a function stops being called.
+			 *
+			 * @param {Function} fn
+			 * @param {number}   delay  Milliseconds.
+			 * @return {Function}
+			 */
+			debounce( fn, delay ) {
+				let timer;
+				return function ( ...args ) {
+					clearTimeout( timer );
+					timer = setTimeout( () => fn.apply( this, args ), delay );
+				};
+			},
+
+			/**
+			 * Post data to the WP AJAX endpoint and return a Promise.
+			 *
+			 * @param {string} action
+			 * @param {Object} data
+			 * @return {Promise}
+			 */
+			ajax( action, data = {} ) {
+				return $.ajax( {
+					url: AJAX_URL,
+					type: 'POST',
+					data: { action, nonce: NONCE, ...data },
+				} );
+			},
+
+			/**
+			 * Scroll the viewport to an element with an optional offset.
+			 *
+			 * @param {jQuery} $el
+			 * @param {number} offset  Pixels from the top. Default 150.
+			 */
+			scrollTo( $el, offset = 150 ) {
+				if ( ! $el.length ) {
+					return;
+				}
+				const offsetTop = $el.offset();
+				if ( ! offsetTop ) {
+					return;
+				}
+				$( 'html, body' ).stop().animate(
+					{
+						scrollTop: offsetTop.top - offset,
+					},
+					500
+				);
+			},
+		};
+
+		// =========================================================================
+		// Popup (toast notifications)
+		// =========================================================================
+
+		const Popup = {
+			/**
+			 * Display a transient toast notification.
+			 *
+			 * @param {string} message
+			 * @param {string} type  'success' | 'error'
+			 */
+			show( message, type = 'success' ) {
+				let $container = $( SEL.POPUP_CONTAINER );
+
+				if ( ! $container.length ) {
+					$container = $( '<div>', {
+						class: CSS.POPUP_CONTAINER,
+					} ).appendTo( 'body' );
+				}
+
+				const $popup = $( '<div>', {
+					class: `${ CSS.POPUP } ${ type }`,
+					text: message,
+				} ).appendTo( $container );
+
+				setTimeout( () => {
+					$popup.addClass( CSS.SHOW );
+				}, 10 );
+
+				setTimeout( () => {
+					$popup.removeClass( CSS.SHOW );
+					setTimeout( () => {
+						$popup.remove();
+					}, 500 );
+				}, 10000 );
+			},
+		};
+
+		// =========================================================================
+		// Modal (blocking dialog)
+		// =========================================================================
+
+		const Modal = {
+
+			/** * Create the modal if it does not already exist. */
+			create() {
+				if ( $( SEL.MODAL_OVERLAY ).length ) {
+					return;
+				}
+
+				const $modal = $( `
+					<div class="${ CSS.MODAL_OVERLAY }"> 
+						<div class="${ CSS.MODAL }"> 
+							<h4>${ i18n.__( 'Payload', 'entire-user-sync' ) }</h4>
+							<button 
+							type="button" 
+							class="${ CSS.MODAL_CLOSE }" 
+							aria-label="${ i18n.__( 'Close', 'entire-user-sync' ) }" 
+							>&times;</button>
+							<div class="${ CSS.MODAL_BODY }"></div> 
+							<button type="button" class="${ CSS.MODAL_OK }" >
+								${ i18n.__( 'OK', 'entire-user-sync' ) }
+							</button> 
+						</div>
+					</div> 
+				` );
+				$modal.appendTo( 'body' );
+			},
+
+			/**
+			 * Show the modal.
+			 *
+			 * @param {string} message Modal message.
+			 * @param {string} type  'success' | 'error'
+			 */
+			show( message, type = 'success' ) {
+				this.create();
+
+				$( SEL.MODAL )
+					.removeClass( `${ CSS.SUCCESS } ${ CSS.ERROR }` )
+					.addClass( type );
+
+				$( SEL.MODAL_BODY ).text( message );
+
+				$( SEL.MODAL_OVERLAY )
+					.addClass( CSS.ACTIVE )
+					.stop( true, true )
+					.fadeIn( 200 );
+			},
+
+			/**
+			 * Close the modal dialog.
+			 */
+			close() {
+				$( SEL.MODAL_OVERLAY )
+					.removeClass( CSS.ACTIVE )
+					.stop( true, true )
+					.fadeOut( 200 );
+			},
+
+			/**
+			 * Format a JSON payload for display.
+			 *
+			 * @param {string} payload Raw JSON payload.
+			 *
+			 * @return {string} Formatted payload.
+			 */
+			formatPayload( payload ) {
+				if ( ! payload ) {
+					return '';
+				}
+
+				try {
+					return JSON.stringify( JSON.parse( payload ), null, 2 );
+				} catch ( error ) {
+					return payload;
+				}
+			},
+
+			/**
+			 * Initialize modal events.
+			 */
+			init() {
+
+				$( document )
+					// View payload.
+					.on( 'click', '.entireus-view-payload', function ( event ) {
+						event.preventDefault();
+						const payload = $( this ).attr( 'data-payload' ) || '';
+						const formattedPayload = Modal.formatPayload( payload );
+						Modal.show( formattedPayload, 'success' );
+					} )
+					// Close button.
+					.on( 'click', SEL.MODAL_CLOSE, Modal.close )
+					// OK button.
+					.on( 'click', SEL.MODAL_OK, Modal.close )
+					// Close when clicking the overlay.
+					.on( 'click', SEL.MODAL_OVERLAY, function ( event ) {
+						if ( event.target === this ) {
+							Modal.close();
+						}
+					} );
+			},
+		};
+
+		const Forms = {
+			/**
+			 *  Initialize form events.
+			 */
+			init() {
+				const form = document.querySelector( '#entireus-logs-filter' );
+				if ( ! form ) {
+					return;
+				}
+				form.addEventListener( 'submit', function ( event ) {
+					const action = form.querySelector( 'select[name="action"]' );
+					const action2 = form.querySelector( 'select[name="action2"]' );
+					const isDelete = ( action && 'delete' === action.value ) ||
+					                 ( action2 && 'delete' === action2.value );
+					if (
+						isDelete &&
+						! window.confirm(
+							i18n.__( 'Delete the selected log entries? This cannot be undone.', 'entire-user-sync' )
+						)
+					) {
+						event.preventDefault();
+					}
+				} );
+			},
+		};
+
+		// =========================================================================
+		// Bootstrap
+		// =========================================================================
+		$( () => {
+			Modal.init();
+			Forms.init();
+		} );
+
+	}
+)( jQuery, entireUsBackendAjax, wp.i18n );
