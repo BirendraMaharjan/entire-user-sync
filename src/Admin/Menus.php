@@ -19,16 +19,9 @@ use EntireUserSync\Logger\LogPage;
 class Menus extends Base {
 
 	/**
-	 * Admin log page helper.
-	 *
-	 * @var LogPage
-	 */
-	private LogPage $log_page;
-	/**
-	 * Initialise menu registration and hooks.
+	 * Initialize menu registration and hooks.
 	 */
 	public function init(): void {
-		$this->log_page = new LogPage();
 
 		add_filter( 'allowed_redirect_hosts', array( $this, 'allowed_redirect_hosts' ) );
 

@@ -9,341 +9,142 @@ use EntireUserSync\Admin\Tables\LogsTable;
 
 defined( 'ABSPATH' ) || exit;
 
-if ( ! isset( $entireus_log_page ) ) {
-	$entireus_log_page = new \EntireUserSync\Logger\LogPage();
-}
-
-if ( ! isset( $entireus_view ) ) {
-	$entireus_view = $entireus_log_page->prepare_view();
-}
-
-$entireus_base_url     = $entireus_view['base_url'];
-$entireus_days         = $entireus_view['days'];
-$entireus_deleted      = $entireus_view['deleted'];
-$entireus_filters      = $entireus_view['filters'];
-$entireus_notice       = $entireus_view['notice'];
-$entireus_page_slug    = $entireus_view['page_slug'];
-$entireus_prune_action = $entireus_view['prune_action'];
-
 /*
  * Create and prepare the logs table.
  */
-$entireus_log_table = new LogsTable(
-	$entireus_log_page,
-	$entireus_filters
-);
+$entireus_log_table = new LogsTable();
 
 $entireus_log_table->prepare_items();
-
-$entireus_total = (int) $entireus_log_table->get_pagination_arg(
-	'total_items'
-);
 ?>
-
-	<div class="wrap" id="entireus-log-wrap">
-
-		<h1>
-			<?php esc_html_e( 'User Sync Log', 'entire-user-sync' ); ?>
-
-			<span class="title-count">
-			<?php echo esc_html( number_format_i18n( $entireus_total ) ); ?>
-		</span>
-		</h1>
-
-		<?php if ( 'pruned' === $entireus_notice ) : ?>
-
-			<div class="notice notice-success is-dismissible">
-				<p>
-					<?php
-					printf(
-					/* Translators: 1: Number of deleted log rows, 2: Number of days. */
-						esc_html__(
-							'Pruned %1$d log rows older than %2$d days.',
-							'entire-user-sync'
-						),
-						absint( $entireus_deleted ),
-						absint( $entireus_days )
-					);
-					?>
-				</p>
-			</div>
-
-		<?php endif; ?>
-
-		<form method="get" class="entireus-filter-form">
-
-			<input
-				type="hidden"
-				name="page"
-				value="<?php echo esc_attr( $entireus_page_slug ); ?>"
-			>
-
-			<div class="entireus-filters">
-
-				<select name="event">
-					<option value="">
-						<?php
-						esc_html_e(
-							'All Events',
-							'entire-user-sync'
-						);
-						?>
-					</option>
-
-					<?php foreach ( array( 'create', 'update', 'delete', 'password', 'login' ) as $entireus_event ) : ?>
-
-						<option
-							value="<?php echo esc_attr( $entireus_event ); ?>"
-							<?php selected( $entireus_filters['event'], $entireus_event ); ?>
-						>
-							<?php echo esc_html( ucfirst( $entireus_event ) ); ?>
-						</option>
-
-					<?php endforeach; ?>
-
-				</select>
-
-				<select name="direction">
-
-					<option value="">
-						<?php
-						esc_html_e(
-							'Both Directions',
-							'entire-user-sync'
-						);
-						?>
-					</option>
-
-					<option
-						value="outgoing"
-						<?php selected( $entireus_filters['direction'], 'outgoing' ); ?>
-					>
-						<?php
-						esc_html_e(
-							'Outgoing',
-							'entire-user-sync'
-						);
-						?>
-					</option>
-
-					<option
-						value="incoming"
-						<?php selected( $entireus_filters['direction'], 'incoming' ); ?>
-					>
-						<?php
-						esc_html_e(
-							'Incoming',
-							'entire-user-sync'
-						);
-						?>
-					</option>
-
-				</select>
-
-				<select name="status">
-
-					<option value="">
-						<?php
-						esc_html_e(
-							'All Statuses',
-							'entire-user-sync'
-						);
-						?>
-					</option>
-
-					<option
-						value="success"
-						<?php selected( $entireus_filters['status'], 'success' ); ?>
-					>
-						<?php
-						esc_html_e(
-							'Success',
-							'entire-user-sync'
-						);
-						?>
-					</option>
-
-					<option
-						value="error"
-						<?php selected( $entireus_filters['status'], 'error' ); ?>
-					>
-						<?php
-						esc_html_e(
-							'Error',
-							'entire-user-sync'
-						);
-						?>
-					</option>
-
-				</select>
-
-				<input
-					type="email"
-					name="user_email"
-					placeholder="<?php esc_attr_e( 'Filter by email', 'entire-user-sync' ); ?>"
-					value="<?php echo esc_attr( $entireus_filters['user_email'] ); ?>"
-				>
-
-				<input
-					type="text"
-					name="site"
-					placeholder="<?php esc_attr_e( 'Filter by site URL', 'entire-user-sync' ); ?>"
-					value="<?php echo esc_attr( $entireus_filters['site'] ); ?>"
-				>
-
-				<input
-					type="date"
-					name="date_from"
-					value="<?php echo esc_attr( $entireus_filters['date_from'] ); ?>"
-					title="<?php esc_attr_e( 'From', 'entire-user-sync' ); ?>"
-				>
-
-				<input
-					type="date"
-					name="date_to"
-					value="<?php echo esc_attr( $entireus_filters['date_to'] ); ?>"
-					title="<?php esc_attr_e( 'To', 'entire-user-sync' ); ?>"
-				>
-
-				<button
-					type="submit"
-					class="button"
-				>
-					<?php
-					esc_html_e(
-						'Filter',
-						'entire-user-sync'
-					);
-					?>
-				</button>
-
-				<a
-					href="<?php echo esc_url( $entireus_base_url ); ?>"
-					class="button"
-				>
-					<?php
-					esc_html_e(
-						'Reset',
-						'entire-user-sync'
-					);
-					?>
-				</a>
-
-			</div>
-
-		</form>
-
-		<?php if ( 0 === $entireus_total ) : ?>
-
+<!-- Content -->
+<div class="entire-admin-content">
+	<?php if ( isset( $_GET['entireus_deleted'] ) ) : ?>
+		<div class="notice notice-success is-dismissible">
 			<p>
 				<?php
-				esc_html_e(
-					'No log entries found.',
-					'entire-user-sync'
+				printf(
+					/* translators: %d: number of deleted log entries. */
+					esc_html( _n( '%d log entry deleted.', '%d log entries deleted.', absint( $_GET['entireus_deleted'] ), 'entire-user-sync' ) ),
+					absint( $_GET['entireus_deleted'] )
 				);
 				?>
 			</p>
-
-		<?php else : ?>
-
-			<form method="get">
-
-				<input
-					type="hidden"
-					name="page"
-					value="<?php echo esc_attr( $entireus_page_slug ); ?>"
-				>
-
-				<?php
-				$entireus_log_table->display();
-				?>
-
-			</form>
-
-		<?php endif; ?>
-
-		<div class="entireus-prune-form">
-
-			<h3>
-				<?php
-				esc_html_e(
-					'Prune Old Logs',
-					'entire-user-sync'
-				);
-				?>
-			</h3>
-
-			<form
-				method="post"
-				action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
-			>
-
-				<input
-					type="hidden"
-					name="action"
-					value="<?php echo esc_attr( $entireus_prune_action ); ?>"
-				>
-
-				<?php wp_nonce_field( 'entireus_prune', 'entireus_prune_nonce' ); ?>
-
-				<label>
-
-					<?php
-					esc_html_e(
-						'Delete entries older than',
-						'entire-user-sync'
-					);
-					?>
-
-					<input
-						type="number"
-						name="prune_days"
-						value="90"
-						min="0"
-						style="width:70px"
-					>
-
-					<?php esc_html_e( 'days', 'entire-user-sync' ); ?>
-
-				</label>
-
-				<button
-					type="submit"
-					class="button button-secondary"
-				>
-					<?php
-					esc_html_e(
-						'Prune Now',
-						'entire-user-sync'
-					);
-					?>
-				</button>
-
-			</form>
-
 		</div>
+	<?php endif; ?>
 
+	<form id="entireus-logs-filter" method="get">
+		<input type="hidden" name="page" value="<?php echo esc_attr( sanitize_key( wp_unslash( $_REQUEST['page'] ?? '' ) ) ); ?>"/>
+		<?php wp_nonce_field( 'bulk-logs' ); ?>
+
+		<?php $entireus_log_table->search_box( __( 'Search site URL', 'entire-user-sync' ), 'entireus-log' ); ?>
+		<?php $entireus_log_table->display(); ?>
+	</form>
+</div>
+<style>
+	#entireus-modal {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, .6);
+		z-index: 99999;
+		display: none;
+		align-items: center;
+		justify-content: center;
+	}
+
+	#entireus-modal-inner {
+		background: #fff;
+		border-radius: 6px;
+		padding: 20px 24px;
+		max-width: 700px;
+		width: 90%;
+		max-height: 80vh;
+		overflow: auto;
+		position: relative;
+	}
+
+	#entireus-modal-close {
+		position: absolute;
+		top: 10px;
+		right: 12px;
+		background: none;
+		border: none;
+		font-size: 18px;
+		cursor: pointer;
+		line-height: 1;
+	}
+
+	#entireus-modal-body {
+		font-size: 12px;
+		white-space: pre-wrap;
+		word-break: break-all;
+		margin-top: 10px;
+	}
+</style>
+
+<div id="entireus-modal">
+	<div id="entireus-modal-inner">
+		<button type="button" id="entireus-modal-close" aria-label="<?php esc_attr_e( 'Close', 'entire-user-sync' ); ?>">&times;</button>
+		<strong><?php esc_html_e( 'Payload', 'entire-user-sync' ); ?></strong>
+		<div id="entireus-modal-body"></div>
 	</div>
+</div>
 
-	<div
-		id="entireus-modal"
-		role="dialog"
-		aria-modal="true"
-		aria-labelledby="entireus-modal-body"
-	>
-		<div id="entireus-modal-inner">
+<script>
+	(
+		function () {
+			const modal = document.getElementById( 'entireus-modal' );
+			const modalBody = document.getElementById( 'entireus-modal-body' );
+			const modalClose = document.getElementById( 'entireus-modal-close' );
+			const form = document.getElementById( 'entireus-logs-filter' );
 
-			<button
-				id="entireus-modal-close"
-				type="button"
-				aria-label="<?php esc_attr_e( 'Close', 'entire-user-sync' ); ?>"
-			>
-				✕
-			</button>
+			document.querySelectorAll( '.entireus-view-payload' ).forEach( function ( btn ) {
+				btn.addEventListener( 'click', function ( e ) {
+					e.preventDefault();
 
-			<pre id="entireus-modal-body"></pre>
+					let raw = this.dataset.payload || '';
 
-		</div>
-	</div>
+					if ( ! raw ) {
+						modalBody.textContent = '<?php echo esc_js( __( 'No payload recorded for this entry.', 'entire-user-sync' ) ); ?>';
+						modal.style.display = 'flex';
+						return;
+					}
 
-<?php $entireus_log_page->render_assets(); ?>
+					try {
+						raw = JSON.stringify( JSON.parse( raw ), null, 2 );
+					} catch ( err ) {
+						// Leave raw as-is if it isn't valid JSON.
+					}
+
+					modalBody.textContent = raw;
+					modal.style.display = 'flex';
+				} );
+			} );
+
+			if ( modalClose ) {
+				modalClose.addEventListener( 'click', function () {
+					modal.style.display = 'none';
+				} );
+			}
+
+			if ( modal ) {
+				modal.addEventListener( 'click', function ( e ) {
+					if ( e.target === this ) {
+						this.style.display = 'none';
+					}
+				} );
+			}
+
+			if ( form ) {
+				form.addEventListener( 'submit', function ( e ) {
+					const action  = form.querySelector( 'select[name="action"]' );
+					const action2 = form.querySelector( 'select[name="action2"]' );
+					const chosen  = ( action && 'delete' === action.value ) || ( action2 && 'delete' === action2.value );
+
+					if ( chosen && ! window.confirm( '<?php echo esc_js( __( 'Delete the selected log entries? This cannot be undone.', 'entire-user-sync' ) ); ?>' ) ) {
+						e.preventDefault();
+					}
+				} );
+			}
+		}
+	)();
+</script>

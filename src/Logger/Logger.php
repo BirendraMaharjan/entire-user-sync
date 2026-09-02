@@ -23,7 +23,6 @@ class Logger {
 	 * @param array $args Log arguments: event, direction, user_email, source_site, target_site, status, message, payload.
 	 */
 	public function log( array $args ): void {
-
 		global $wpdb;
 
 		$payload = $args['payload'] ?? array();
@@ -50,6 +49,7 @@ class Logger {
 	 * Query log rows with filtering, sorting and pagination.
 	 *
 	 * @param array $args Filtering and pagination args.
+	 *
 	 * @return array{rows: array, total: int, pages: int}
 	 */
 	public static function query( array $args = array() ): array {
@@ -62,12 +62,21 @@ class Logger {
 		$offset   = ( $page - 1 ) * $per_page;
 
 		$allowed_order   = array( 'ASC', 'DESC' );
-		$allowed_orderby = array( 'id', 'event', 'direction', 'user_email', 'source_site', 'target_site', 'status', 'created_at' );
+		$allowed_orderby = array(
+			'id',
+			'event',
+			'direction',
+			'user_email',
+			'source_site',
+			'target_site',
+			'status',
+			'created_at'
+		);
 
 		$orderby = in_array( $args['orderby'] ?? '', $allowed_orderby, true )
-		? $args['orderby'] : 'id';
+			? $args['orderby'] : 'id';
 		$order   = in_array( strtoupper( $args['order'] ?? '' ), $allowed_order, true )
-		? strtoupper( $args['order'] ) : 'DESC';
+			? strtoupper( $args['order'] ) : 'DESC';
 
 		$where  = array();
 		$values = array();
@@ -113,7 +122,6 @@ class Logger {
 			$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `{$table}` {$where_sql}" );
 		}
 
-
 		/*
 		 * $table, $orderby and $order are trusted internal values:
 		 * - $table is built from $wpdb->prefix and an internal constant.
@@ -142,6 +150,7 @@ class Logger {
 	 * Prune old log entries.
 	 *
 	 * @param int $days Number of days to keep.
+	 *
 	 * @return int Number of rows deleted.
 	 */
 	public static function prune( int $days = 90 ): int {
@@ -151,6 +160,28 @@ class Logger {
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table_name is built from $wpdb->prefix and internal constant.
 		return (int) $wpdb->query( $wpdb->prepare( "DELETE FROM `{$table_name}` WHERE created_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL %d DAY)", $days ) );
+	}
+
+	/**
+	 * Delete specific log rows by ID.
+	 *
+	 * @param int[] $ids Row IDs to delete.
+	 *
+	 * @return int Number of rows deleted.
+	 */
+	public static function delete( array $ids ): int {
+		global $wpdb;
+
+		$ids = array_values( array_filter( array_map( 'absint', $ids ) ) );
+		if ( ! $ids ) {
+			return 0;
+		}
+
+		$table        = $wpdb->prefix . self::TABLE;
+		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table trusted; $placeholders count matches $ids, all values passed to prepare().
+		return (int) $wpdb->query( $wpdb->prepare( "DELETE FROM `{$table}` WHERE id IN ({$placeholders})", ...$ids ) );
 	}
 
 	/**
