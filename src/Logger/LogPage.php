@@ -12,23 +12,26 @@ namespace EntireUserSync\Logger;
 use EntireUserSync\Common\Abstracts\Base;
 
 /**
- * Class LogPage
+ * Class LogPage.
  *
- * @package EntireUserSync\Sync
+ * @package EntireUserSync\Logger
  */
 class LogPage extends Base {
 
+	/**
+	 * Menu slug suffix.
+	 */
 	private const MENU_SLUG_SUFFIX = '-logs';
-	private const DEFAULT_PER_PAGE = 2;
-	private const PRUNE_ACTION     = 'entireus_prune_logs';
 
-	private const EVENT_BADGES = array(
-		'create'   => '#00a32a',
-		'update'   => '#0073aa',
-		'delete'   => '#d63638',
-		'password' => '#8c5cf5',
-		'login'    => '#f0a30a',
-	);
+	/**
+	 * Default number of logs per page.
+	 */
+	public const DEFAULT_PER_PAGE = 50;
+
+	/**
+	 * Prune action.
+	 */
+	private const PRUNE_ACTION = 'entireus_prune_logs';
 
 	/**
 	 * Constructor.
@@ -36,24 +39,41 @@ class LogPage extends Base {
 	public function __construct() {
 		parent::__construct();
 
-		add_action( 'admin_post_' . self::PRUNE_ACTION, array( $this, 'handle_prune' ) );
+		add_action(
+			'admin_post_' . self::PRUNE_ACTION,
+			array( $this, 'handle_prune' )
+		);
 	}
 
 	/**
 	 * Handle prune form submission from the admin page.
-	 *
-	 * Validates capabilities and nonce then prunes old log entries.
 	 */
 	public function handle_prune(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to prune sync logs.', 'entire-user-sync' ) );
+			wp_die(
+				esc_html__(
+					'You do not have permission to prune sync logs.',
+					'entire-user-sync'
+				)
+			);
 		}
 
-		check_admin_referer( 'entireus_prune', 'entireus_prune_nonce' );
+		check_admin_referer(
+			'entireus_prune',
+			'entireus_prune_nonce'
+		);
 
-		$days = max( 0, absint( wp_unslash( $_POST['prune_days'] ?? 90 ) ) );
+		$days = max(
+			0,
+			absint(
+				wp_unslash(
+					$_POST['prune_days'] ?? 90
+				)
+			)
+		);
 
-		$deleted  = Logger::prune( $days );
+		$deleted = Logger::prune( $days );
+
 		$redirect = wp_get_referer();
 
 		if ( ! $redirect ) {
@@ -74,7 +94,7 @@ class LogPage extends Base {
 	}
 
 	/**
-	 * Render the logs admin page HTML.
+	 * Render the logs admin page.
 	 */
 	public function render(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -89,8 +109,12 @@ class LogPage extends Base {
 		if ( ! is_readable( $template ) ) {
 			printf(
 				'<div class="notice notice-error"><p>%s</p></div>',
-				esc_html__( 'Log page template not found.', 'entire-user-sync' )
+				esc_html__(
+					'Log page template not found.',
+					'entire-user-sync'
+				)
 			);
+
 			return;
 		}
 
@@ -100,104 +124,102 @@ class LogPage extends Base {
 	/**
 	 * Prepare view data for the logs admin page.
 	 *
-	 * @return array View context including rows, filters and pagination.
+	 * @return array View context.
 	 */
 	public function prepare_view(): array {
-		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- This is read-only admin filter state.
-		$filters = $this->get_filters();
-		$result  = Logger::query( $filters );
-
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only admin filter state.
 		return array(
-			'badge'        => self::EVENT_BADGES,
 			'base_url'     => $this->page_url(),
-			'days'         => absint( wp_unslash( $_GET['entireus_days'] ?? 90 ) ),
-			'deleted'      => absint( wp_unslash( $_GET['entireus_deleted'] ?? 0 ) ),
-			'filters'      => $filters,
-			'notice'       => sanitize_key( wp_unslash( $_GET['entireus_log_notice'] ?? '' ) ),
-			'paged'        => $filters['paged'],
+			'days'         => absint(
+				wp_unslash(
+					$_GET['entireus_days'] ?? 90
+				)
+			),
+			'deleted'      => absint(
+				wp_unslash(
+					$_GET['entireus_deleted'] ?? 0
+				)
+			),
+			'filters'      => $this->get_filters(),
+			'notice'       => sanitize_key(
+				wp_unslash(
+					$_GET['entireus_log_notice'] ?? ''
+				)
+			),
 			'page_slug'    => $this->menu_slug(),
-			'pages'        => $result['pages'],
 			'prune_action' => self::PRUNE_ACTION,
-			'rows'         => $result['rows'],
-			'total'        => $result['total'],
 		);
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 	}
 
 	/**
-	 * Parse and return filters from the request query parameters.
+	 * Parse and return filters from request query parameters.
 	 *
-	 * @return array Filters array with sanitized values.
+	 * @return array Filters.
 	 */
 	public function get_filters(): array {
-		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- This is read-only admin filter state.
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only admin filter state.
 		return array(
-			'event'      => sanitize_key( wp_unslash( $_GET['event'] ?? '' ) ),
-			'direction'  => sanitize_key( wp_unslash( $_GET['direction'] ?? '' ) ),
-			'status'     => sanitize_key( wp_unslash( $_GET['status'] ?? '' ) ),
-			'user_email' => sanitize_email( wp_unslash( $_GET['user_email'] ?? '' ) ),
-			'site'       => sanitize_text_field( wp_unslash( $_GET['site'] ?? '' ) ),
-			'date_from'  => sanitize_text_field( wp_unslash( $_GET['date_from'] ?? '' ) ),
-			'date_to'    => sanitize_text_field( wp_unslash( $_GET['date_to'] ?? '' ) ),
-			'per_page'   => self::DEFAULT_PER_PAGE,
-			'paged'      => max( 1, absint( wp_unslash( $_GET['paged'] ?? 1 ) ) ),
+			'event'      => sanitize_key(
+				wp_unslash(
+					$_GET['event'] ?? ''
+				)
+			),
+			'direction'  => sanitize_key(
+				wp_unslash(
+					$_GET['direction'] ?? ''
+				)
+			),
+			'status'     => sanitize_key(
+				wp_unslash(
+					$_GET['status'] ?? ''
+				)
+			),
+			'user_email' => sanitize_email(
+				wp_unslash(
+					$_GET['user_email'] ?? ''
+				)
+			),
+			'site'       => sanitize_text_field(
+				wp_unslash(
+					$_GET['site'] ?? ''
+				)
+			),
+			'date_from'  => sanitize_text_field(
+				wp_unslash(
+					$_GET['date_from'] ?? ''
+				)
+			),
+			'date_to'    => sanitize_text_field(
+				wp_unslash(
+					$_GET['date_to'] ?? ''
+				)
+			),
 		);
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 	}
 
 	/**
-	 * Output simple pagination links for the admin view.
-	 *
-	 * @param int    $page     Current page number.
-	 * @param int    $pages    Total pages.
-	 * @param array  $filters  Active filters.
-	 * @param string $base_url Base URL for links.
-	 */
-	public function render_pagination( int $page, int $pages, array $filters, string $base_url ): void {
-		if ( $pages <= 1 ) {
-			return;
-		}
-
-		$query = array_filter(
-			array_diff_key(
-				$filters,
-				array_flip( array( 'page', 'paged', 'per_page' ) )
-			)
-		);
-
-		$base_url = add_query_arg( $query, $base_url );
-
-		$pagination = paginate_links(
-			array(
-				'base'      => add_query_arg( 'paged', '%#%', $base_url ),
-				'format'    => '',
-				'current'   => $page,
-				'total'     => $pages,
-				'type'      => 'plain',
-				'prev_text' => '&lsaquo;',
-				'next_text' => '&rsaquo;',
-			)
-		);
-
-		if ( $pagination ) {
-			echo '<div class="tablenav"><div class="tablenav-pages">';
-			echo wp_kses_post( $pagination );
-			echo '</div></div>';
-		}
-	}
-
-	/**
-	 * Shorten a URL for display (remove protocol and trailing slash).
+	 * Shorten a URL for display.
 	 *
 	 * @param string $url URL to shorten.
-	 * @return string Shortened URL or em-dash when empty.
+	 *
+	 * @return string Shortened URL.
 	 */
 	public function short_url( string $url ): string {
-		return $url ? preg_replace( '#^https?://#', '', untrailingslashit( $url ) ) : '—';
+		return $url
+			? preg_replace(
+				'#^https?://#',
+				'',
+				untrailingslashit( $url )
+			)
+			: '—';
 	}
 
 	/**
 	 * Return this page's menu slug.
+	 *
+	 * @return string
 	 */
 	public function menu_slug(): string {
 		return $this->plugin->slug() . self::MENU_SLUG_SUFFIX;
@@ -205,9 +227,13 @@ class LogPage extends Base {
 
 	/**
 	 * Return the admin page URL for the logs page.
+	 *
+	 * @return string
 	 */
 	public function page_url(): string {
-		return admin_url( 'admin.php?page=' . $this->menu_slug() );
+		return admin_url(
+			'admin.php?page=' . $this->menu_slug()
+		);
 	}
 
 	/**
@@ -234,7 +260,8 @@ class LogPage extends Base {
 				margin: 12px 0;
 			}
 
-			.entireus-filters input, .entireus-filters select {
+			.entireus-filters input,
+			.entireus-filters select {
 				height: 30px;
 				font-size: 13px;
 			}
@@ -273,7 +300,7 @@ class LogPage extends Base {
 				inset: 0;
 				background: rgba(0, 0, 0, .6);
 				z-index: 99999;
-				display: flex;
+				display: none;
 				align-items: center;
 				justify-content: center;
 			}
@@ -306,48 +333,42 @@ class LogPage extends Base {
 				word-break: break-all;
 				margin-top: 10px;
 			}
-
-			.tablenav-pages a,
-			.tablenav-pages .current {
-				display: inline-block;
-				padding: 3px 8px;
-				border: 1px solid #ccc;
-				border-radius: 3px;
-				margin: 2px;
-				text-decoration: none;
-			}
-
-			.tablenav-pages .current {
-				background: #0073aa;
-				color: #fff;
-				border-color: #0073aa;
-			}
 		</style>
+
 		<script>
 			(
 				function () {
+					var modal = document.getElementById( 'entireus-modal' );
+					var modalBody = document.getElementById( 'entireus-modal-body' );
+					var modalClose = document.getElementById( 'entireus-modal-close' );
+
 					document.querySelectorAll( '.entireus-payload-btn' ).forEach( function ( btn ) {
 						btn.addEventListener( 'click', function () {
 							var raw = this.dataset.payload;
+
 							try {
 								raw = JSON.stringify( JSON.parse( raw ), null, 2 );
 							} catch ( e ) {
 							}
 
-							document.getElementById( 'entireus-modal-body' ).textContent = raw;
-							document.getElementById( 'entireus-modal' ).style.display = 'flex';
+							modalBody.textContent = raw;
+							modal.style.display = 'flex';
 						} );
 					} );
 
-					document.getElementById( 'entireus-modal-close' ).addEventListener( 'click', function () {
-						document.getElementById( 'entireus-modal' ).style.display = 'none';
-					} );
+					if ( modalClose ) {
+						modalClose.addEventListener( 'click', function () {
+							modal.style.display = 'none';
+						} );
+					}
 
-					document.getElementById( 'entireus-modal' ).addEventListener( 'click', function ( e ) {
-						if ( e.target === this ) {
-							this.style.display = 'none';
-						}
-					} );
+					if ( modal ) {
+						modal.addEventListener( 'click', function ( e ) {
+							if ( e.target === this ) {
+								this.style.display = 'none';
+							}
+						} );
+					}
 				}
 			)();
 		</script>
