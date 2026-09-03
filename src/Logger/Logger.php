@@ -28,6 +28,7 @@ class Logger {
 		$payload = $args['payload'] ?? array();
 		self::strip_sensitive( $payload );
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Insert-only, no caching applicable.
 		$wpdb->insert(
 			$wpdb->prefix . self::TABLE,
 			array(
@@ -139,10 +140,10 @@ class Logger {
 		$where_sql = $where ? 'WHERE ' . implode( ' AND ', $where ) : '';
 
 		if ( $values ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $table is built from $wpdb->prefix and $where_sql contains the placeholders corresponding to $values.
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $table is built from $wpdb->prefix and $where_sql contains the placeholders corresponding to $values.
 			$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `{$table}` {$where_sql}", ...$values ) );
 		} else {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $table is built from $wpdb->prefix and internal constant.
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $table is built from $wpdb->prefix and internal constant.
 			$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `{$table}` {$where_sql}" );
 		}
 
@@ -160,7 +161,7 @@ class Logger {
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Dynamic identifiers are validated above; $where_sql contains only internal placeholders and values are passed to prepare().
 		$query = $wpdb->prepare( $query, ...array_merge( $values, array( $per_page, $offset ) ) );
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $query has been prepared above; dynamic identifiers are validated and all values are prepared.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $query has been prepared above; dynamic identifiers are validated and all values are prepared.
 		$rows = $wpdb->get_results( $query, ARRAY_A );
 
 		return array(
@@ -168,22 +169,6 @@ class Logger {
 			'total' => $total,
 			'pages' => $total ? (int) ceil( $total / $per_page ) : 1,
 		);
-	}
-
-	/**
-	 * Prune old log entries.
-	 *
-	 * @param int $days Number of days to keep.
-	 *
-	 * @return int Number of rows deleted.
-	 */
-	public static function prune( int $days = 90 ): int {
-		global $wpdb;
-
-		$table_name = $wpdb->prefix . self::TABLE;
-
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table_name is built from $wpdb->prefix and internal constant.
-		return (int) $wpdb->query( $wpdb->prepare( "DELETE FROM `{$table_name}` WHERE created_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL %d DAY)", $days ) );
 	}
 
 	/**
@@ -206,7 +191,7 @@ class Logger {
 		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
 		$modified_at  = current_time( 'mysql', true );
 
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic table name and placeholders are trusted; IDs and date are passed to prepare().
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Dynamic table name and placeholders are trusted; IDs and date are passed to prepare().
 		return (int) $wpdb->query(
 			$wpdb->prepare(
 				"UPDATE `{$table}`
@@ -218,7 +203,8 @@ class Logger {
 				)
 			)
 		);
-		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+
 	}
 
 	/**
@@ -241,7 +227,7 @@ class Logger {
 		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
 		$modified_at  = current_time( 'mysql', true );
 
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic table name and placeholders are trusted; IDs and date are passed to prepare().
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Dynamic table name and placeholders are trusted; IDs and date are passed to prepare().
 		return (int) $wpdb->query(
 			$wpdb->prepare(
 				"UPDATE `{$table}`
@@ -253,7 +239,7 @@ class Logger {
 				)
 			)
 		);
-		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	}
 
 	/**
@@ -275,14 +261,14 @@ class Logger {
 		$table        = $wpdb->prefix . self::TABLE;
 		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
 
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic table name and placeholders are trusted; IDs are passed to prepare().
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Dynamic table name and placeholders are trusted; IDs are passed to prepare().
 		return (int) $wpdb->query(
 			$wpdb->prepare(
 				"DELETE FROM `{$table}` WHERE id IN ({$placeholders})",
 				...$ids
 			)
 		);
-		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	}
 
 	/**
@@ -294,28 +280,27 @@ class Logger {
 		$table   = $wpdb->prefix . self::TABLE;
 		$charset = $wpdb->get_charset_collate();
 
-		$sql = "CREATE TABLE IF NOT EXISTS `{$table}` (
-			    `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-			    `event`       VARCHAR(20)  NOT NULL DEFAULT '',
-			    `direction`   VARCHAR(10)  NOT NULL DEFAULT 'outgoing',
-			    `user_email`  VARCHAR(100) NOT NULL DEFAULT '',
-			    `source_site` VARCHAR(255) NOT NULL DEFAULT '',
-			    `target_site` VARCHAR(255) NOT NULL DEFAULT '',
-			    `status`      VARCHAR(10)  NOT NULL DEFAULT 'success',
-			    `post_status` VARCHAR(10)  NOT NULL DEFAULT 'publish',
-			    `message`     VARCHAR(500) NOT NULL DEFAULT '',
-			    `payload`     LONGTEXT,
-			    `created_at`  DATETIME     NOT NULL,
-			    `modified_at` DATETIME     NOT NULL
-			
-			    PRIMARY KEY (`id`),
-			    KEY `event`      (`event`),
-			    KEY `status`     (`status`),
-    			KEY `post_status` (`post_status`),
-			    KEY `user_email` (`user_email`(50)),
-			    KEY `created_at` (`created_at`),
-			    KEY `modified_at` (`modified_at`)
-			) {$charset};";
+		$sql = "CREATE TABLE {$table} (
+			id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			event       VARCHAR(20)  NOT NULL DEFAULT '',
+			direction   VARCHAR(10)  NOT NULL DEFAULT 'outgoing',
+			user_email  VARCHAR(100) NOT NULL DEFAULT '',
+			source_site VARCHAR(255) NOT NULL DEFAULT '',
+			target_site VARCHAR(255) NOT NULL DEFAULT '',
+			status      VARCHAR(10)  NOT NULL DEFAULT 'success',
+			post_status VARCHAR(10)  NOT NULL DEFAULT 'publish',
+			message     VARCHAR(500) NOT NULL DEFAULT '',
+			payload     LONGTEXT,
+			created_at  DATETIME     NOT NULL,
+			modified_at DATETIME     NOT NULL,
+			PRIMARY KEY  (id),
+			KEY event       (event),
+			KEY status      (status),
+			KEY post_status (post_status),
+			KEY user_email  (user_email(50)),
+			KEY created_at  (created_at),
+			KEY modified_at (modified_at)
+		) {$charset};";
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql );
@@ -331,6 +316,7 @@ class Logger {
 
 		$table = $wpdb->prefix . self::TABLE;
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Aggregate count, always needs to be live.
 		$result = $wpdb->get_row(
 			"SELECT
             SUM( post_status = 'publish' ) AS all_count,
@@ -357,7 +343,7 @@ class Logger {
 
 		$table_name = $wpdb->prefix . self::TABLE;
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table_name is safe.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Schema change on plugin table, safe table name, no caching applicable.
 		$wpdb->query( "DROP TABLE IF EXISTS `{$table_name}`" );
 	}
 
