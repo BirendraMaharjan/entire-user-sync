@@ -18,6 +18,9 @@ if ( ! class_exists( 'WP_List_Table' ) ) {
  */
 class LogsTable extends \WP_List_Table {
 
+	/**
+	 * Constructor.
+	 */
 	public function __construct() {
 		parent::__construct(
 			array(
@@ -28,19 +31,25 @@ class LogsTable extends \WP_List_Table {
 		);
 	}
 
+	/**
+	 * Get the table views.
+	 *
+	 * @return array<string, string> Table views.
+	 */
 	protected function get_views(): array {
-		$current_status = isset( $_GET['filter_status'] ) ?
-			sanitize_key( wp_unslash( $_GET['filter_status'] ) ) :
+		$obj            = $_GET; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- GET parameters are only used to determine the current table view.
+		$current_status = isset( $obj['filter_status'] ) ?
+			sanitize_key( wp_unslash( $obj['filter_status'] ) ) :
 			'';
 
-		$current_view = isset( $_GET['log_view'] ) ?
-			sanitize_key( wp_unslash( $_GET['log_view'] ) ) :
+		$current_view = isset( $obj['log_view'] ) ?
+			sanitize_key( wp_unslash( $obj['log_view'] ) ) :
 			'';
 
 		$counts = Logger::get_log_counts();
 
 		$base_url = remove_query_arg(
-			array_diff( array_keys( $_GET ), array( 'page' ) )
+			array_diff( array_keys( $obj ), array( 'page' ) )
 		);
 
 		return array(
@@ -87,6 +96,11 @@ class LogsTable extends \WP_List_Table {
 		);
 	}
 
+	/**
+	 * Get the table columns.
+	 *
+	 * @return array<string, string> Table columns.
+	 */
 	public function get_columns(): array {
 		return array(
 			'cb'          => '<input type="checkbox" />',
@@ -101,6 +115,11 @@ class LogsTable extends \WP_List_Table {
 		);
 	}
 
+	/**
+	 * Get sortable columns.
+	 *
+	 * @return array<string, array{string, bool}> Sortable columns.
+	 */
 	protected function get_sortable_columns(): array {
 		return array(
 			'created_at'  => array( 'created_at', true ),
@@ -113,32 +132,27 @@ class LogsTable extends \WP_List_Table {
 		);
 	}
 
-	protected function get_bulk_actions(): array {
-		$view = isset( $_GET['log_view'] ) ?
-			sanitize_key( wp_unslash( $_GET['log_view'] ) ) :
-			'';
-
-		if ( 'trash' === $view ) {
-			return array(
-				'restore' => __( 'Restore', 'entire-user-sync' ),
-				'delete'  => __( 'Delete Permanently', 'entire-user-sync' ),
-			);
-		}
-
-		return array(
-			'trash'  => __( 'Move to Trash', 'entire-user-sync' ),
-			'delete' => __( 'Delete Permanently', 'entire-user-sync' ),
-		);
-	}
-
+	/**
+	 * Display extra table navigation controls.
+	 *
+	 * @param string $which Position of the navigation.
+	 */
 	protected function extra_tablenav( $which ): void {
 		if ( 'top' !== $which ) {
 			return;
 		}
 
-		$event     = isset( $_REQUEST['filter_event'] ) ? sanitize_key( wp_unslash( $_REQUEST['filter_event'] ) ) : '';
-		$direction = isset( $_REQUEST['filter_direction'] ) ? sanitize_key( wp_unslash( $_REQUEST['filter_direction'] ) ) : '';
-		$status    = isset( $_REQUEST['filter_status'] ) ? sanitize_key( wp_unslash( $_REQUEST['filter_status'] ) ) : '';
+		$obj = $_GET; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- GET parameters are only used to determine the current table view.
+
+		$event     = isset( $obj['filter_event'] ) ?
+			sanitize_key( wp_unslash( $obj['filter_event'] ) ) :
+			'';
+		$direction = isset( $obj['filter_direction'] ) ?
+			sanitize_key( wp_unslash( $obj['filter_direction'] ) ) :
+			'';
+		$status    = isset( $obj['filter_status'] ) ?
+			sanitize_key( wp_unslash( $obj['filter_status'] ) ) :
+			'';
 		?>
 		<div class="alignleft actions">
 			<label>
@@ -168,6 +182,13 @@ class LogsTable extends \WP_List_Table {
 		<?php
 	}
 
+	/**
+	 * Display the checkbox column.
+	 *
+	 * @param array $item Log row.
+	 *
+	 * @return string Checkbox HTML.
+	 */
 	protected function column_cb( $item ): string {
 		return sprintf(
 			'<input type="checkbox" name="log[]" value="%d" />',
@@ -175,32 +196,45 @@ class LogsTable extends \WP_List_Table {
 		);
 	}
 
+	/**
+	 * Display a default column value.
+	 *
+	 * @param array  $item        Log row.
+	 * @param string $column_name Column name.
+	 *
+	 * @return string Column value.
+	 */
 	protected function column_default( $item, $column_name ) {
 		return isset( $item[ $column_name ] ) ? esc_html( $item[ $column_name ] ) : '';
 	}
 
+	/**
+	 * Display the created date column.
+	 *
+	 * @param array $item Log row.
+	 *
+	 * @return string Formatted date/time.
+	 */
 	protected function column_created_at( $item ): string {
 		$timestamp = strtotime( $item['created_at'] . ' UTC' );
 
 		$t_time = sprintf(
-		/* translators: 1: Log date, 2: Log time. */
+			/* translators: 1: Log date, 2: Log time. */
 			__( '%1$s at %2$s', 'entire-user-sync' ),
 			wp_date( __( 'Y/m/d', 'entire-user-sync' ), $timestamp ),
 			wp_date( __( 'g:i a', 'entire-user-sync' ), $timestamp )
 		);
 
-		/**
-		 * Filters the displayed date/time for a log row.
-		 *
-		 * @param string $t_time    Formatted date/time string.
-		 * @param array  $item      The log row.
-		 * @param int    $timestamp Unix timestamp (UTC).
-		 */
-		$t_time = apply_filters( 'entireus_log_date_column_time', $t_time, $item, $timestamp );
-
 		return esc_html( $t_time );
 	}
 
+	/**
+	 * Display the status column.
+	 *
+	 * @param array $item Log row.
+	 *
+	 * @return string Status HTML.
+	 */
 	protected function column_status( $item ): string {
 		$class = 'error' === $item['status'] ? 'notice-error' : 'notice-success';
 
@@ -211,6 +245,13 @@ class LogsTable extends \WP_List_Table {
 		);
 	}
 
+	/**
+	 * Display the message column and row actions.
+	 *
+	 * @param array $item Log row.
+	 *
+	 * @return string Message and row actions HTML.
+	 */
 	protected function column_message( $item ): string {
 		$delete_url = wp_nonce_url(
 			add_query_arg(
@@ -239,6 +280,27 @@ class LogsTable extends \WP_List_Table {
 		);
 
 		return esc_html( $item['message'] ) . $this->row_actions( $actions );
+	}
+
+	/**
+	 * Get available bulk actions.
+	 *
+	 * @return array<string, string> Bulk actions.
+	 */
+	protected function get_bulk_actions(): array {
+		$view = isset( $_GET['log_view'] ) ? sanitize_key( wp_unslash( $_GET['log_view'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- GET parameters are only used to determine the current table view.
+
+		if ( 'trash' === $view ) {
+			return array(
+				'restore' => __( 'Restore', 'entire-user-sync' ),
+				'delete'  => __( 'Delete Permanently', 'entire-user-sync' ),
+			);
+		}
+
+		return array(
+			'trash'  => __( 'Move to Trash', 'entire-user-sync' ),
+			'delete' => __( 'Delete Permanently', 'entire-user-sync' ),
+		);
 	}
 
 	/**
@@ -291,14 +353,19 @@ class LogsTable extends \WP_List_Table {
 		exit;
 	}
 
+	/**
+	 * Prepare items for display.
+	 */
 	public function prepare_items(): void {
 		$this->process_bulk_action();
 
+		$obj = $_GET; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- GET parameters are only used to determine the current table view.
+
 		$per_page     = $this->get_items_per_page( 'entireus_logs_per_page' );
 		$current_page = $this->get_pagenum();
-		$orderby      = ! empty( $_GET['orderby'] ) ? sanitize_key( wp_unslash( $_GET['orderby'] ) ) : 'created_at';
-		$order        = ! empty( $_GET['order'] ) ? sanitize_key( wp_unslash( $_GET['order'] ) ) : 'desc';
-		$search       = ! empty( $_REQUEST['s'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['s'] ) ) : '';
+		$orderby      = ! empty( $obj['orderby'] ) ? sanitize_key( wp_unslash( $obj['orderby'] ) ) : 'created_at';
+		$order        = ! empty( $obj['order'] ) ? sanitize_key( wp_unslash( $obj['order'] ) ) : 'desc';
+		$search       = ! empty( $obj['s'] ) ? sanitize_text_field( wp_unslash( $obj['s'] ) ) : '';
 
 		$this->_column_headers = array(
 			$this->get_columns(),
@@ -312,10 +379,10 @@ class LogsTable extends \WP_List_Table {
 				'paged'     => $current_page,
 				'orderby'   => $orderby,
 				'order'     => $order,
-				'event'     => ! empty( $_REQUEST['filter_event'] ) ? sanitize_key( wp_unslash( $_REQUEST['filter_event'] ) ) : '',
-				'direction' => ! empty( $_REQUEST['filter_direction'] ) ? sanitize_key( wp_unslash( $_REQUEST['filter_direction'] ) ) : '',
-				'status'    => ! empty( $_REQUEST['filter_status'] ) ? sanitize_key( wp_unslash( $_REQUEST['filter_status'] ) ) : '',
-				'view'      => ! empty( $_REQUEST['log_view'] ) ? sanitize_key( wp_unslash( $_REQUEST['log_view'] ) ) : '',
+				'event'     => ! empty( $obj['filter_event'] ) ? sanitize_key( wp_unslash( $obj['filter_event'] ) ) : '',
+				'direction' => ! empty( $obj['filter_direction'] ) ? sanitize_key( wp_unslash( $obj['filter_direction'] ) ) : '',
+				'status'    => ! empty( $obj['filter_status'] ) ? sanitize_key( wp_unslash( $obj['filter_status'] ) ) : '',
+				'view'      => ! empty( $obj['log_view'] ) ? sanitize_key( wp_unslash( $obj['log_view'] ) ) : '',
 				'search'    => $search,
 			)
 		);
@@ -344,6 +411,7 @@ class LogsTable extends \WP_List_Table {
 
 		switch ( $action ) {
 			case 'trashed':
+				// translators: %d: Number of log entries moved to Trash.
 				$message = _n(
 					'%d log entry moved to Trash.',
 					'%d log entries moved to Trash.',
@@ -353,6 +421,7 @@ class LogsTable extends \WP_List_Table {
 				break;
 
 			case 'restored':
+				// translators: %d: Number of log entries restored.
 				$message = _n(
 					'%d log entry restored.',
 					'%d log entries restored.',
@@ -362,6 +431,7 @@ class LogsTable extends \WP_List_Table {
 				break;
 
 			case 'deleted':
+				// translators: %d: Number of log entries permanently deleted.
 				$message = _n(
 					'%d log entry permanently deleted.',
 					'%d log entries permanently deleted.',
