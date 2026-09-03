@@ -29,13 +29,13 @@ class LogsTable extends \WP_List_Table {
 	}
 
 	protected function get_views(): array {
-		$current_status = isset( $_GET['filter_status'] )
-			? sanitize_key( wp_unslash( $_GET['filter_status'] ) )
-			: '';
+		$current_status = isset( $_GET['filter_status'] ) ?
+			sanitize_key( wp_unslash( $_GET['filter_status'] ) ) :
+			'';
 
-		$current_view = isset( $_GET['log_view'] )
-			? sanitize_key( wp_unslash( $_GET['log_view'] ) )
-			: '';
+		$current_view = isset( $_GET['log_view'] ) ?
+			sanitize_key( wp_unslash( $_GET['log_view'] ) ) :
+			'';
 
 		$counts = Logger::get_log_counts();
 
@@ -49,7 +49,7 @@ class LogsTable extends \WP_List_Table {
 				esc_url( $base_url ),
 				'' === $current_status && '' === $current_view ? 'current' : '',
 				sprintf(
-				/* translators: %d: Number of logs. */
+					/* translators: %d: Number of logs. */
 					__( 'All (%d)', 'entire-user-sync' ),
 					$counts['all']
 				)
@@ -59,7 +59,7 @@ class LogsTable extends \WP_List_Table {
 				esc_url( add_query_arg( 'filter_status', 'success', $base_url ) ),
 				'success' === $current_status && '' === $current_view ? 'current' : '',
 				sprintf(
-				/* translators: %d: Number of successful logs. */
+					/* translators: %d: Number of successful logs. */
 					__( 'Success (%d)', 'entire-user-sync' ),
 					$counts['success']
 				)
@@ -69,7 +69,7 @@ class LogsTable extends \WP_List_Table {
 				esc_url( add_query_arg( 'filter_status', 'error', $base_url ) ),
 				'error' === $current_status && '' === $current_view ? 'current' : '',
 				sprintf(
-				/* translators: %d: Number of error logs. */
+					/* translators: %d: Number of error logs. */
 					__( 'Error (%d)', 'entire-user-sync' ),
 					$counts['error']
 				)
@@ -161,7 +161,7 @@ class LogsTable extends \WP_List_Table {
 			</label>
 			<label>
 				<input type="text" name="filter_event" value="<?php echo esc_attr( $event ); ?>"
-				       placeholder="<?php esc_attr_e( 'Event', 'entire-user-sync' ); ?>"/>
+						placeholder="<?php esc_attr_e( 'Event', 'entire-user-sync' ); ?>"/>
 			</label>
 			<?php submit_button( __( 'Filter', 'entire-user-sync' ), '', 'filter_action', false ); ?>
 		</div>
@@ -184,9 +184,9 @@ class LogsTable extends \WP_List_Table {
 
 		$t_time = sprintf(
 		/* translators: 1: Log date, 2: Log time. */
-			__( '%1$s at %2$s' ),
-			wp_date( __( 'Y/m/d' ), $timestamp ),
-			wp_date( __( 'g:i a' ), $timestamp )
+			__( '%1$s at %2$s', 'entire-user-sync' ),
+			wp_date( __( 'Y/m/d', 'entire-user-sync' ), $timestamp ),
+			wp_date( __( 'g:i a', 'entire-user-sync' ), $timestamp )
 		);
 
 		/**
@@ -223,7 +223,7 @@ class LogsTable extends \WP_List_Table {
 		);
 
 		$actions = array(
-			'view' => sprintf(
+			'view'   => sprintf(
 				'<a href="#" class="entireus-view-payload" data-id="%d" data-payload="%s">%s</a>',
 				absint( $item['id'] ),
 				esc_attr( $item['payload'] ?? '' ),
@@ -242,10 +242,10 @@ class LogsTable extends \WP_List_Table {
 	}
 
 	/**
-	 * Handle the "delete" bulk action.
+	 * Handle the bulk action.
 	 *
-	 * Verifies the bulk-action nonce and capability, deletes the requested
-	 * rows, then redirects (PRG) to avoid a resubmission on refresh.
+	 * Verifies the bulk-action nonce and capability, performs the requested
+	 * action, then redirects (PRG) to avoid resubmission on refresh.
 	 */
 	public function process_bulk_action(): void {
 		$action = $this->current_action();
@@ -260,18 +260,21 @@ class LogsTable extends \WP_List_Table {
 			wp_die( esc_html__( 'You do not have permission to do this.', 'entire-user-sync' ) );
 		}
 
-		$ids = isset( $_REQUEST['log'] ) ?
-			array_map( 'absint', (array) wp_unslash( $_REQUEST['log'] ) ) :
-			array();
+		$ids = isset( $_REQUEST['log'] )
+			? array_map( 'absint', (array) wp_unslash( $_REQUEST['log'] ) )
+			: array();
 
 		$ids = array_values( array_filter( $ids ) );
 
 		if ( 'trash' === $action ) {
 			$affected = Logger::trash( $ids );
+			$notice   = 'entireus_trashed';
 		} elseif ( 'restore' === $action ) {
 			$affected = Logger::restore( $ids );
+			$notice   = 'entireus_restored';
 		} else {
 			$affected = Logger::delete( $ids );
+			$notice   = 'entireus_deleted';
 		}
 
 		$redirect_url = remove_query_arg(
@@ -279,7 +282,7 @@ class LogsTable extends \WP_List_Table {
 		);
 
 		$redirect_url = add_query_arg(
-			'entireus_affected',
+			$notice,
 			$affected,
 			$redirect_url
 		);
@@ -326,5 +329,62 @@ class LogsTable extends \WP_List_Table {
 				'total_pages' => $result['pages'],
 			)
 		);
+	}
+
+	/**
+	 * Display an admin log action notice.
+	 *
+	 * @param string $action Action name.
+	 * @param int    $count  Number of affected logs.
+	 */
+	public function display_log_notice( string $action, int $count ): void {
+		if ( ! $count ) {
+			return;
+		}
+
+		switch ( $action ) {
+			case 'trashed':
+				$message = _n(
+					'%d log entry moved to Trash.',
+					'%d log entries moved to Trash.',
+					$count,
+					'entire-user-sync'
+				);
+				break;
+
+			case 'restored':
+				$message = _n(
+					'%d log entry restored.',
+					'%d log entries restored.',
+					$count,
+					'entire-user-sync'
+				);
+				break;
+
+			case 'deleted':
+				$message = _n(
+					'%d log entry permanently deleted.',
+					'%d log entries permanently deleted.',
+					$count,
+					'entire-user-sync'
+				);
+				break;
+
+			default:
+				return;
+		}
+
+		?>
+		<div class="notice notice-success is-dismissible">
+			<p>
+				<?php
+				printf(
+					esc_html( $message ),
+					esc_html( number_format_i18n( $count ) )
+				);
+				?>
+			</p>
+		</div>
+		<?php
 	}
 }

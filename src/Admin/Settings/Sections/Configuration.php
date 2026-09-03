@@ -183,7 +183,6 @@ class Configuration {
 
 		$placeholders = implode( ' AND ', array_fill( 0, count( $skip_patterns ), 'meta_key NOT LIKE %s' ) );
 
-
 		$sql = $wpdb->prepare(
 			'SELECT DISTINCT meta_key FROM ' . $wpdb->usermeta . ' WHERE ' . $placeholders . ' ORDER BY meta_key ASC', // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 			...$skip_patterns

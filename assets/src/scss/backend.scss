@@ -39,8 +39,12 @@
 }
 
 .entire-admin-wrap {
-  margin-left: -20px;
-  padding: 20px;
+  padding: 20px 20px 20px 0;
+
+	.notice{
+		margin-left: 0;
+		margin-right: 0;
+	}
 }
 
 .entire-admin-header {
