@@ -97,16 +97,19 @@ class Menus extends Base {
 			array( $this, 'render_page' )
 		);
 
-		$logs = add_submenu_page(
-			$this->plugin->slug(),
-			__( 'Logs', 'entire-user-sync' ),
-			__( 'Logs', 'entire-user-sync' ),
-			'manage_options',
-			$this->plugin->slug() . '-logs',
-			array( $this, 'render_page' )
-		);
-		add_action( 'load-' . $logs, array( $this, 'add_logs_screen_options' ) );
-		add_filter( 'manage_' . $logs . '_columns', array( $this, 'get_logs_columns' ) );
+		$settings = new Settings();
+		if ( $settings->get( 'configuration', 'enable_log' ) ) {
+			$logs = add_submenu_page(
+				$this->plugin->slug(),
+				__( 'Logs', 'entire-user-sync' ),
+				__( 'Logs', 'entire-user-sync' ),
+				'manage_options',
+				$this->plugin->slug() . '-logs',
+				array( $this, 'render_page' )
+			);
+			add_action( 'load-' . $logs, array( $this, 'add_logs_screen_options' ) );
+			add_filter( 'manage_' . $logs . '_columns', array( $this, 'get_logs_columns' ) );
+		}
 
 		add_submenu_page(
 			$this->plugin->slug(),
