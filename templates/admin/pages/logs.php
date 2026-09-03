@@ -17,34 +17,31 @@ $entireus_log_table->prepare_items();
 ?>
 <!-- Content -->
 <div class="entire-admin-content">
-	<?php if ( isset( $_GET['entireus_deleted'] ) ) : ?>
-		<div class="notice notice-success is-dismissible">
-			<p>
-				<?php
-				$deleted = isset( $_GET['entireus_deleted'] ) ? absint( $_GET['entireus_deleted'] ) : 0;
+	<?php
+	// phpcs:disable WordPress.Security.NonceVerification.Recommended -- These GET parameters are only used to display an admin notice.
+	if ( isset( $_GET['entireus_trashed'] ) ) {
+		$entireus_log_table->display_log_notice( 'trashed', absint( $_GET['entireus_trashed'] ) );
+	}
 
-				printf(
-					esc_html(
-						_n(
-							/* translators: %d: number of deleted log entries. */
-							'%d log entry deleted.',
-							'%d log entries deleted.',
-							$deleted,
-							'entire-user-sync'
-						)
-					),
-					$deleted
-				);
-				?>
-			</p>
-		</div>
-	<?php endif; ?>
+	if ( isset( $_GET['entireus_restored'] ) ) {
+		$entireus_log_table->display_log_notice( 'restored', absint( $_GET['entireus_restored'] ) );
+	}
+
+	if ( isset( $_GET['entireus_deleted'] ) ) {
+		$entireus_log_table->display_log_notice( 'deleted', absint( $_GET['entireus_deleted'] ) );
+	}
+	// phpcs:enable WordPress.Security.NonceVerification.Recommended
+	?>
 
 	<form id="entireus-logs-filter" method="get">
 		<input
 			type="hidden"
 			name="page"
-			value="<?php echo esc_attr( sanitize_key( wp_unslash( $_REQUEST['page'] ?? '' ) ) ); ?>"
+			value="
+			<?php
+			echo esc_attr( sanitize_key( wp_unslash( $_GET['page'] ?? '' ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The page parameter only preserves the current admin page.
+			?>
+			"
 		/>
 		<?php wp_nonce_field( 'bulk-logs' ); ?>
 

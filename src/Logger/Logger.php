@@ -71,7 +71,7 @@ class Logger {
 			'source_site',
 			'target_site',
 			'status',
-			'created_at'
+			'created_at',
 		);
 
 		$orderby = in_array( $args['orderby'] ?? '', $allowed_orderby, true )
@@ -129,10 +129,10 @@ class Logger {
 		$view = isset( $args['view'] ) ? sanitize_key( $args['view'] ) : '';
 
 		if ( 'trash' === $view ) {
-			$where[] = 'post_status = %s';
+			$where[]  = 'post_status = %s';
 			$values[] = 'trash';
 		} else {
-			$where[] = 'post_status = %s';
+			$where[]  = 'post_status = %s';
 			$values[] = 'publish';
 		}
 
@@ -186,6 +186,13 @@ class Logger {
 		return (int) $wpdb->query( $wpdb->prepare( "DELETE FROM `{$table_name}` WHERE created_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL %d DAY)", $days ) );
 	}
 
+	/**
+	 * Move specific log rows to Trash.
+	 *
+	 * @param int[] $ids Row IDs to trash.
+	 *
+	 * @return int Number of rows moved to Trash.
+	 */
 	public static function trash( array $ids ): int {
 		global $wpdb;
 
@@ -199,7 +206,7 @@ class Logger {
 		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
 		$modified_at  = current_time( 'mysql', true );
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table is trusted; placeholders match $ids.
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic table name and placeholders are trusted; IDs and date are passed to prepare().
 		return (int) $wpdb->query(
 			$wpdb->prepare(
 				"UPDATE `{$table}`
@@ -211,8 +218,16 @@ class Logger {
 				)
 			)
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 	}
 
+	/**
+	 * Restore specific trashed log rows by ID.
+	 *
+	 * @param int[] $ids Row IDs to restore.
+	 *
+	 * @return int Number of rows restored.
+	 */
 	public static function restore( array $ids ): int {
 		global $wpdb;
 
@@ -226,7 +241,7 @@ class Logger {
 		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
 		$modified_at  = current_time( 'mysql', true );
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table is trusted; placeholders match $ids.
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic table name and placeholders are trusted; IDs and date are passed to prepare().
 		return (int) $wpdb->query(
 			$wpdb->prepare(
 				"UPDATE `{$table}`
@@ -238,6 +253,7 @@ class Logger {
 				)
 			)
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 	}
 
 	/**
@@ -251,6 +267,7 @@ class Logger {
 		global $wpdb;
 
 		$ids = array_values( array_filter( array_map( 'absint', $ids ) ) );
+
 		if ( ! $ids ) {
 			return 0;
 		}
@@ -258,8 +275,14 @@ class Logger {
 		$table        = $wpdb->prefix . self::TABLE;
 		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table trusted; $placeholders count matches $ids, all values passed to prepare().
-		return (int) $wpdb->query( $wpdb->prepare( "DELETE FROM `{$table}` WHERE id IN ({$placeholders})", ...$ids ) );
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Dynamic table name and placeholders are trusted; IDs are passed to prepare().
+		return (int) $wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM `{$table}` WHERE id IN ({$placeholders})",
+				...$ids
+			)
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 	}
 
 	/**
@@ -298,28 +321,31 @@ class Logger {
 		dbDelta( $sql );
 	}
 
+	/**
+	 * Get counts of logs by status.
+	 *
+	 * @return array{all: int, success: int, error: int, trash: int}
+	 */
 	public static function get_log_counts(): array {
 		global $wpdb;
 
 		$table = $wpdb->prefix . self::TABLE;
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table is built from $wpdb->prefix and an internal constant.
-		$results = $wpdb->get_results(
+		$result = $wpdb->get_row(
 			"SELECT
-            COUNT(*) AS all_count,
-            SUM( post_status = 'publish' ) AS publish_count,
-            SUM( post_status = 'trash' ) AS trash_count,
+            SUM( post_status = 'publish' ) AS all_count,
             SUM( post_status = 'publish' AND status = 'success' ) AS success_count,
-            SUM( post_status = 'publish' AND status = 'error' ) AS error_count
-        FROM `{$table}`",
+            SUM( post_status = 'publish' AND status = 'error' ) AS error_count,
+            SUM( post_status = 'trash' ) AS trash_count
+        FROM `{$table}`", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table is built from $wpdb->prefix and an internal constant.
 			ARRAY_A
 		);
 
 		return array(
-			'all'     => (int) $results[0]['publish_count'],
-			'success' => (int) $results[0]['success_count'],
-			'error'   => (int) $results[0]['error_count'],
-			'trash'   => (int) $results[0]['trash_count'],
+			'all'     => (int) $result['all_count'],
+			'success' => (int) $result['success_count'],
+			'error'   => (int) $result['error_count'],
+			'trash'   => (int) $result['trash_count'],
 		);
 	}
 

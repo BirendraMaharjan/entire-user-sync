@@ -11,7 +11,6 @@ namespace EntireUserSync\Admin;
 
 use EntireUserSync\Admin\Settings\Settings;
 use EntireUserSync\Common\Abstracts\Base;
-use EntireUserSync\Logger\LogPage;
 
 /**
  * Registers admin menus and dispatches page rendering.
@@ -201,6 +200,9 @@ class Menus extends Base {
 		require $this->plugin->template_path() . '/admin/page.php';
 	}
 
+	/**
+	 * Add screen options for the logs page.
+	 */
 	public function add_logs_screen_options(): void {
 		add_screen_option(
 			'per_page',
@@ -212,6 +214,15 @@ class Menus extends Base {
 		);
 	}
 
+	/**
+	 * Handle screen option value for the logs page.
+	 *
+	 * @param bool|int $status Current status.
+	 * @param string   $option Option name.
+	 * @param mixed    $value  Option value.
+	 *
+	 * @return mixed Modified status or value.
+	 */
 	public function set_screen_option( $status, $option, $value ) {
 		if ( 'entireus_logs_per_page' === $option ) {
 			return absint( $value );
@@ -220,16 +231,25 @@ class Menus extends Base {
 		return $status;
 	}
 
+	/**
+	 * Get the columns for the logs table.
+	 *
+	 * @param array $columns Existing columns.
+	 * @return array Modified columns.
+	 */
 	public function get_logs_columns( $columns ): array {
-		return array(
-			'created_at'  => __( 'Date', 'entire-user-sync' ),
-			'event'       => __( 'Event', 'entire-user-sync' ),
-			'direction'   => __( 'Direction', 'entire-user-sync' ),
-			'user_email'  => __( 'User Email', 'entire-user-sync' ),
-			'source_site' => __( 'Source', 'entire-user-sync' ),
-			'target_site' => __( 'Target', 'entire-user-sync' ),
-			'status'      => __( 'Status', 'entire-user-sync' ),
-			'message'     => __( 'Message', 'entire-user-sync' ),
+		return array_merge(
+			$columns,
+			array(
+				'created_at'  => __( 'Date', 'entire-user-sync' ),
+				'event'       => __( 'Event', 'entire-user-sync' ),
+				'direction'   => __( 'Direction', 'entire-user-sync' ),
+				'user_email'  => __( 'User Email', 'entire-user-sync' ),
+				'source_site' => __( 'Source Site', 'entire-user-sync' ),
+				'target_site' => __( 'Target Site', 'entire-user-sync' ),
+				'status'      => __( 'Status', 'entire-user-sync' ),
+				'message'     => __( 'Message', 'entire-user-sync' ),
+			)
 		);
 	}
 }

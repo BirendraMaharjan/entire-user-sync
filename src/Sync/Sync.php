@@ -61,13 +61,10 @@ class Sync extends Base {
 		add_action( 'set_user_role', array( $this, 'maybe_auto_sync_user_role' ) );
 
 		add_action( 'delete_user', array( $this, 'maybe_auto_delete_user' ) );
-		// add_action( 'remove_user_from_blog', array( $this, 'maybe_auto_delete_user' ) );
 
-		// add_action( 'password_reset', array( $this, 'on_password_reset' ), 10, 2 );
 		add_action( 'wp_set_password', array( $this, 'on_set_password' ), 10, 2 );
 
 		add_filter( 'authenticate', array( $this, 'maybe_import_remote_user' ), 20, 3 );
-		// add_action( 'wp_login', array( $this, 'on_local_login' ), 10, 2 );
 	}
 
 	/**
