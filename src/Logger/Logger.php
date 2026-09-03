@@ -40,8 +40,9 @@ class Logger {
 				'message'     => sanitize_text_field( $args['message'] ?? '' ),
 				'payload'     => wp_json_encode( $payload ),
 				'created_at'  => current_time( 'mysql', true ),
+				'modified_at' => current_time( 'mysql', true ),
 			),
-			array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
+			array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 		);
 	}
 
@@ -97,11 +98,24 @@ class Logger {
 			$where[]  = 'user_email LIKE %s';
 			$values[] = '%' . $wpdb->esc_like( $args['user_email'] ) . '%';
 		}
-		if ( ! empty( $args['site'] ) ) {
-			$like     = '%' . $wpdb->esc_like( $args['site'] ) . '%';
-			$where[]  = '( source_site LIKE %s OR target_site LIKE %s )';
-			$values[] = $like;
-			$values[] = $like;
+		if ( ! empty( $args['search'] ) ) {
+			$like = '%' . $wpdb->esc_like( $args['search'] ) . '%';
+
+			$where[] = '(
+		        event LIKE %s
+		        OR direction LIKE %s
+		        OR user_email LIKE %s
+		        OR source_site LIKE %s
+		        OR target_site LIKE %s
+		        OR status LIKE %s
+		        OR message LIKE %s
+		        OR payload LIKE %s
+		    )';
+
+			$values = array_merge(
+				$values,
+				array_fill( 0, 8, $like )
+			);
 		}
 		if ( ! empty( $args['date_from'] ) ) {
 			$where[]  = 'created_at >= %s';
@@ -110,6 +124,16 @@ class Logger {
 		if ( ! empty( $args['date_to'] ) ) {
 			$where[]  = 'created_at <= %s';
 			$values[] = $args['date_to'] . ' 23:59:59';
+		}
+
+		$view = isset( $args['view'] ) ? sanitize_key( $args['view'] ) : '';
+
+		if ( 'trash' === $view ) {
+			$where[] = 'post_status = %s';
+			$values[] = 'trash';
+		} else {
+			$where[] = 'post_status = %s';
+			$values[] = 'publish';
 		}
 
 		$where_sql = $where ? 'WHERE ' . implode( ' AND ', $where ) : '';
@@ -162,6 +186,60 @@ class Logger {
 		return (int) $wpdb->query( $wpdb->prepare( "DELETE FROM `{$table_name}` WHERE created_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL %d DAY)", $days ) );
 	}
 
+	public static function trash( array $ids ): int {
+		global $wpdb;
+
+		$ids = array_values( array_filter( array_map( 'absint', $ids ) ) );
+
+		if ( ! $ids ) {
+			return 0;
+		}
+
+		$table        = $wpdb->prefix . self::TABLE;
+		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		$modified_at  = current_time( 'mysql', true );
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table is trusted; placeholders match $ids.
+		return (int) $wpdb->query(
+			$wpdb->prepare(
+				"UPDATE `{$table}`
+            SET post_status = 'trash', modified_at = %s
+            WHERE id IN ({$placeholders}) AND post_status = 'publish'",
+				...array_merge(
+					array( $modified_at ),
+					$ids
+				)
+			)
+		);
+	}
+
+	public static function restore( array $ids ): int {
+		global $wpdb;
+
+		$ids = array_values( array_filter( array_map( 'absint', $ids ) ) );
+
+		if ( ! $ids ) {
+			return 0;
+		}
+
+		$table        = $wpdb->prefix . self::TABLE;
+		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		$modified_at  = current_time( 'mysql', true );
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table is trusted; placeholders match $ids.
+		return (int) $wpdb->query(
+			$wpdb->prepare(
+				"UPDATE `{$table}`
+            SET post_status = 'publish', modified_at = %s
+            WHERE id IN ({$placeholders}) AND post_status = 'trash'",
+				...array_merge(
+					array( $modified_at ),
+					$ids
+				)
+			)
+		);
+	}
+
 	/**
 	 * Delete specific log rows by ID.
 	 *
@@ -194,25 +272,55 @@ class Logger {
 		$charset = $wpdb->get_charset_collate();
 
 		$sql = "CREATE TABLE IF NOT EXISTS `{$table}` (
-			`id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-			`event`       VARCHAR(20)  NOT NULL DEFAULT '',
-			`direction`   VARCHAR(10)  NOT NULL DEFAULT 'outgoing',
-			`user_email`  VARCHAR(100) NOT NULL DEFAULT '',
-			`source_site` VARCHAR(255) NOT NULL DEFAULT '',
-			`target_site` VARCHAR(255) NOT NULL DEFAULT '',
-			`status`      VARCHAR(10)  NOT NULL DEFAULT 'success',
-			`message`     VARCHAR(500) NOT NULL DEFAULT '',
-			`payload`     LONGTEXT,
-			`created_at`  DATETIME     NOT NULL,
-			PRIMARY KEY  (`id`),
-			KEY `event`      (`event`),
-			KEY `status`     (`status`),
-			KEY `user_email` (`user_email`(50)),
-			KEY `created_at` (`created_at`)
-		) {$charset};";
+			    `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			    `event`       VARCHAR(20)  NOT NULL DEFAULT '',
+			    `direction`   VARCHAR(10)  NOT NULL DEFAULT 'outgoing',
+			    `user_email`  VARCHAR(100) NOT NULL DEFAULT '',
+			    `source_site` VARCHAR(255) NOT NULL DEFAULT '',
+			    `target_site` VARCHAR(255) NOT NULL DEFAULT '',
+			    `status`      VARCHAR(10)  NOT NULL DEFAULT 'success',
+			    `post_status` VARCHAR(10)  NOT NULL DEFAULT 'publish',
+			    `message`     VARCHAR(500) NOT NULL DEFAULT '',
+			    `payload`     LONGTEXT,
+			    `created_at`  DATETIME     NOT NULL,
+			    `modified_at` DATETIME     NOT NULL
+			
+			    PRIMARY KEY (`id`),
+			    KEY `event`      (`event`),
+			    KEY `status`     (`status`),
+    			KEY `post_status` (`post_status`),
+			    KEY `user_email` (`user_email`(50)),
+			    KEY `created_at` (`created_at`),
+			    KEY `modified_at` (`modified_at`)
+			) {$charset};";
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql );
+	}
+
+	public static function get_log_counts(): array {
+		global $wpdb;
+
+		$table = $wpdb->prefix . self::TABLE;
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $table is built from $wpdb->prefix and an internal constant.
+		$results = $wpdb->get_results(
+			"SELECT
+            COUNT(*) AS all_count,
+            SUM( post_status = 'publish' ) AS publish_count,
+            SUM( post_status = 'trash' ) AS trash_count,
+            SUM( post_status = 'publish' AND status = 'success' ) AS success_count,
+            SUM( post_status = 'publish' AND status = 'error' ) AS error_count
+        FROM `{$table}`",
+			ARRAY_A
+		);
+
+		return array(
+			'all'     => (int) $results[0]['publish_count'],
+			'success' => (int) $results[0]['success_count'],
+			'error'   => (int) $results[0]['error_count'],
+			'trash'   => (int) $results[0]['trash_count'],
+		);
 	}
 
 	/**
