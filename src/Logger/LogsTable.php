@@ -5,9 +5,7 @@
  * @package EntireUserSync
  */
 
-namespace EntireUserSync\Admin\Tables;
-
-use EntireUserSync\Logger\Logger;
+namespace EntireUserSync\Logger;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -204,7 +202,7 @@ class LogsTable extends \WP_List_Table {
 	public function prepare_items(): void {
 		$this->process_bulk_action();
 
-		$per_page     = $this->get_items_per_page( 'entireus_logs_per_page', 20 );
+		$per_page     = $this->get_items_per_page( 'entireus_logs_per_page' );
 		$current_page = $this->get_pagenum();
 		$orderby      = ! empty( $_GET['orderby'] ) ? sanitize_key( wp_unslash( $_GET['orderby'] ) ) : 'created_at';
 		$order        = ! empty( $_GET['order'] ) ? sanitize_key( wp_unslash( $_GET['order'] ) ) : 'desc';

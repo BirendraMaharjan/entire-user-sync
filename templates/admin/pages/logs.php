@@ -5,7 +5,7 @@
  * @package EntireUserSync
  */
 
-use EntireUserSync\Admin\Tables\LogsTable;
+use EntireUserSync\Logger\LogsTable;
 
 defined( 'ABSPATH' ) || exit;
 
