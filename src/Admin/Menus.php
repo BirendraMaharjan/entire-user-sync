@@ -26,6 +26,7 @@ class Menus extends Base {
 		add_filter( 'allowed_redirect_hosts', array( $this, 'allowed_redirect_hosts' ) );
 
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
+		add_filter( 'set-screen-option', array( $this, 'set_screen_option' ), 10, 3 );
 		add_action( 'current_screen', array( $this, 'suppress_admin_notices' ) );
 		add_filter(
 			'plugin_action_links_' . $this->plugin->plugin_basename(),
@@ -97,7 +98,7 @@ class Menus extends Base {
 			array( $this, 'render_page' )
 		);
 
-		add_submenu_page(
+		$logs = add_submenu_page(
 			$this->plugin->slug(),
 			__( 'Logs', 'entire-user-sync' ),
 			__( 'Logs', 'entire-user-sync' ),
@@ -105,6 +106,8 @@ class Menus extends Base {
 			$this->plugin->slug() . '-logs',
 			array( $this, 'render_page' )
 		);
+		add_action( 'load-' . $logs, array( $this, 'add_logs_screen_options' ) );
+		add_filter( 'manage_' . $logs . '_columns', array( $this, 'get_logs_columns' ) );
 
 		add_submenu_page(
 			$this->plugin->slug(),
@@ -196,5 +199,37 @@ class Menus extends Base {
 		$active_tab = $data['active_tab'];
 
 		require $this->plugin->template_path() . '/admin/page.php';
+	}
+
+	public function add_logs_screen_options(): void {
+		add_screen_option(
+			'per_page',
+			array(
+				'label'   => __( 'Logs per page', 'entire-user-sync' ),
+				'default' => 20,
+				'option'  => 'entireus_logs_per_page',
+			)
+		);
+	}
+
+	public function set_screen_option( $status, $option, $value ) {
+		if ( 'entireus_logs_per_page' === $option ) {
+			return absint( $value );
+		}
+
+		return $status;
+	}
+
+	public function get_logs_columns( $columns ): array {
+		return array(
+			'created_at'  => __( 'Date', 'entire-user-sync' ),
+			'event'       => __( 'Event', 'entire-user-sync' ),
+			'direction'   => __( 'Direction', 'entire-user-sync' ),
+			'user_email'  => __( 'User Email', 'entire-user-sync' ),
+			'source_site' => __( 'Source', 'entire-user-sync' ),
+			'target_site' => __( 'Target', 'entire-user-sync' ),
+			'status'      => __( 'Status', 'entire-user-sync' ),
+			'message'     => __( 'Message', 'entire-user-sync' ),
+		);
 	}
 }
