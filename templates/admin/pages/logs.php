@@ -48,6 +48,8 @@ $entireus_log_table->prepare_items();
 		/>
 		<?php wp_nonce_field( 'bulk-logs' ); ?>
 
+		<?php $entireus_log_table->views(); ?>
+
 		<?php $entireus_log_table->search_box( __( 'Search Log', 'entire-user-sync' ), 'entireus-log' ); ?>
 		<?php $entireus_log_table->display(); ?>
 	</form>

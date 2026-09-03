@@ -28,6 +28,65 @@ class LogsTable extends \WP_List_Table {
 		);
 	}
 
+	protected function get_views(): array {
+		$current_status = isset( $_GET['filter_status'] )
+			? sanitize_key( wp_unslash( $_GET['filter_status'] ) )
+			: '';
+
+		$current_view = isset( $_GET['log_view'] )
+			? sanitize_key( wp_unslash( $_GET['log_view'] ) )
+			: '';
+
+		$counts = Logger::get_log_counts();
+
+		$base_url = remove_query_arg(
+			array_diff( array_keys( $_GET ), array( 'page' ) )
+		);
+
+		return array(
+			'all'     => sprintf(
+				'<a href="%s" class="%s">%s</a>',
+				esc_url( $base_url ),
+				'' === $current_status && '' === $current_view ? 'current' : '',
+				sprintf(
+				/* translators: %d: Number of logs. */
+					__( 'All (%d)', 'entire-user-sync' ),
+					$counts['all']
+				)
+			),
+			'success' => sprintf(
+				'<a href="%s" class="%s">%s</a>',
+				esc_url( add_query_arg( 'filter_status', 'success', $base_url ) ),
+				'success' === $current_status && '' === $current_view ? 'current' : '',
+				sprintf(
+				/* translators: %d: Number of successful logs. */
+					__( 'Success (%d)', 'entire-user-sync' ),
+					$counts['success']
+				)
+			),
+			'error'   => sprintf(
+				'<a href="%s" class="%s">%s</a>',
+				esc_url( add_query_arg( 'filter_status', 'error', $base_url ) ),
+				'error' === $current_status && '' === $current_view ? 'current' : '',
+				sprintf(
+				/* translators: %d: Number of error logs. */
+					__( 'Error (%d)', 'entire-user-sync' ),
+					$counts['error']
+				)
+			),
+			'trash'   => sprintf(
+				'<a href="%s" class="%s">%s</a>',
+				esc_url( add_query_arg( 'log_view', 'trash', $base_url ) ),
+				'trash' === $current_view ? 'current' : '',
+				sprintf(
+				/* translators: %d: Number of trashed logs. */
+					__( 'Trash (%d)', 'entire-user-sync' ),
+					$counts['trash']
+				)
+			),
+		);
+	}
+
 	public function get_columns(): array {
 		return array(
 			'cb'          => '<input type="checkbox" />',
@@ -55,8 +114,20 @@ class LogsTable extends \WP_List_Table {
 	}
 
 	protected function get_bulk_actions(): array {
+		$view = isset( $_GET['log_view'] ) ?
+			sanitize_key( wp_unslash( $_GET['log_view'] ) ) :
+			'';
+
+		if ( 'trash' === $view ) {
+			return array(
+				'restore' => __( 'Restore', 'entire-user-sync' ),
+				'delete'  => __( 'Delete Permanently', 'entire-user-sync' ),
+			);
+		}
+
 		return array(
-			'delete' => __( 'Delete', 'entire-user-sync' ),
+			'trash'  => __( 'Move to Trash', 'entire-user-sync' ),
+			'delete' => __( 'Delete Permanently', 'entire-user-sync' ),
 		);
 	}
 
@@ -112,7 +183,7 @@ class LogsTable extends \WP_List_Table {
 		$timestamp = strtotime( $item['created_at'] . ' UTC' );
 
 		$t_time = sprintf(
-			/* translators: 1: Log date, 2: Log time. */
+		/* translators: 1: Log date, 2: Log time. */
 			__( '%1$s at %2$s' ),
 			wp_date( __( 'Y/m/d' ), $timestamp ),
 			wp_date( __( 'g:i a' ), $timestamp )
@@ -152,7 +223,7 @@ class LogsTable extends \WP_List_Table {
 		);
 
 		$actions = array(
-			'view'   => sprintf(
+			'view' => sprintf(
 				'<a href="#" class="entireus-view-payload" data-id="%d" data-payload="%s">%s</a>',
 				absint( $item['id'] ),
 				esc_attr( $item['payload'] ?? '' ),
@@ -177,7 +248,9 @@ class LogsTable extends \WP_List_Table {
 	 * rows, then redirects (PRG) to avoid a resubmission on refresh.
 	 */
 	public function process_bulk_action(): void {
-		if ( 'delete' !== $this->current_action() ) {
+		$action = $this->current_action();
+
+		if ( ! in_array( $action, array( 'trash', 'restore', 'delete' ), true ) ) {
 			return;
 		}
 
@@ -187,13 +260,29 @@ class LogsTable extends \WP_List_Table {
 			wp_die( esc_html__( 'You do not have permission to do this.', 'entire-user-sync' ) );
 		}
 
-		$ids = isset( $_REQUEST['log'] ) ? array_map( 'absint', (array) wp_unslash( $_REQUEST['log'] ) ) : array();
+		$ids = isset( $_REQUEST['log'] ) ?
+			array_map( 'absint', (array) wp_unslash( $_REQUEST['log'] ) ) :
+			array();
+
 		$ids = array_values( array_filter( $ids ) );
 
-		$deleted = $ids ? Logger::delete( $ids ) : 0;
+		if ( 'trash' === $action ) {
+			$affected = Logger::trash( $ids );
+		} elseif ( 'restore' === $action ) {
+			$affected = Logger::restore( $ids );
+		} else {
+			$affected = Logger::delete( $ids );
+		}
 
-		$redirect_url = remove_query_arg( array( 'action', 'action2', 'log', '_wpnonce', '_wp_http_referer' ) );
-		$redirect_url = add_query_arg( 'entireus_deleted', $deleted, $redirect_url );
+		$redirect_url = remove_query_arg(
+			array( 'action', 'action2', 'log', '_wpnonce', '_wp_http_referer' )
+		);
+
+		$redirect_url = add_query_arg(
+			'entireus_affected',
+			$affected,
+			$redirect_url
+		);
 
 		wp_safe_redirect( esc_url_raw( $redirect_url ) );
 		exit;
@@ -223,7 +312,8 @@ class LogsTable extends \WP_List_Table {
 				'event'     => ! empty( $_REQUEST['filter_event'] ) ? sanitize_key( wp_unslash( $_REQUEST['filter_event'] ) ) : '',
 				'direction' => ! empty( $_REQUEST['filter_direction'] ) ? sanitize_key( wp_unslash( $_REQUEST['filter_direction'] ) ) : '',
 				'status'    => ! empty( $_REQUEST['filter_status'] ) ? sanitize_key( wp_unslash( $_REQUEST['filter_status'] ) ) : '',
-				'site'      => $search,
+				'view'      => ! empty( $_REQUEST['log_view'] ) ? sanitize_key( wp_unslash( $_REQUEST['log_view'] ) ) : '',
+				'search'    => $search,
 			)
 		);
 
