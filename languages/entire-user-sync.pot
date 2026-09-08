@@ -3,481 +3,533 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Entire User Sync 1.0.0\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/entire-user-sync\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/entire-user-sync-pro\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-06-18T08:07:40+00:00\n"
+"POT-Creation-Date: 2026-09-08T11:25:02+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: entire-user-sync\n"
 
 #. Plugin Name of the plugin
 #: entire-user-sync.php:3
-#: src/Config/Plugin.php:124
+#: src/Config/Plugin.php:134
 msgid "Entire User Sync"
 msgstr ""
 
 #. Plugin URI of the plugin
 #: entire-user-sync.php:4
-msgid "https://github.com/BirendraMaharjan/vi-account-manager"
+msgid "https://github.com/BirendraMaharjan/entire-user-sync"
 msgstr ""
 
 #. Description of the plugin
 #: entire-user-sync.php:5
-msgid "Account Manager for WooCommerce."
+msgid "User sync for WordPress."
 msgstr ""
 
 #. Author of the plugin
-#: entire-user-sync.php:9
+#: entire-user-sync.php:7
 msgid "Birendra Maharjan"
 msgstr ""
 
 #. Author URI of the plugin
-#: entire-user-sync.php:10
+#: entire-user-sync.php:8
 msgid "https://www.linkedin.com/in/birendramaharjan/"
 msgstr ""
 
-#: entire-user-sync.php:32
+#: entire-user-sync-pro/entire-user-sync-pro.php:34
+#: entire-user-sync.php:34
 msgid "Entire User Sync is missing Composer dependencies. Run composer install."
 msgstr ""
 
-#: src/Admin/Assets.php:137
+#: src/Admin/Assets.php:136
 msgid "Reset all fields in this section to their defaults? This cannot be undone."
 msgstr ""
 
-#: src/Admin/Assets.php:138
+#: src/Admin/Assets.php:137
 msgid "Section reset to defaults."
 msgstr ""
 
-#: src/Admin/Assets.php:139
+#: src/Admin/Assets.php:138
 msgid "Reset failed. Please try again."
 msgstr ""
 
-#: src/Admin/Assets.php:140
+#: src/Admin/Assets.php:139
 msgid "Select Image"
 msgstr ""
 
-#: src/Admin/Assets.php:141
+#: src/Admin/Assets.php:140
 msgid "Use this image"
 msgstr ""
 
-#: src/Admin/Menus.php:59
-#: src/Admin/Menus.php:60
-#: src/Admin/Settings/Sections/back.php:10
-#: src/Admin/Settings/Sections/Configuration.php:10
+#: src/Admin/Menus.php:84
+#: src/Admin/Menus.php:85
+#: src/Admin/Settings/Sections/Backup.php:23
+#: src/Admin/Settings/Sections/Configuration.php:23
 msgid "Configuration"
 msgstr ""
 
-#: src/Admin/Menus.php:68
-#: src/Admin/Menus.php:69
+#: src/Admin/Menus.php:93
+#: src/Admin/Menus.php:94
 msgid "Overview"
 msgstr ""
 
-#: src/Admin/Menus.php:77
-#: src/Admin/Menus.php:78
+#: src/Admin/Menus.php:104
+#: src/Admin/Menus.php:105
 msgid "Logs"
 msgstr ""
 
-#: src/Admin/Menus.php:86
-#: src/Admin/Menus.php:87
+#: src/Admin/Menus.php:116
+#: src/Admin/Menus.php:117
 msgid "License"
 msgstr ""
 
-#: src/Admin/Menus.php:95
-#: src/Admin/Menus.php:96
+#: src/Admin/Menus.php:125
+#: src/Admin/Menus.php:126
 msgid "Help"
 msgstr ""
 
-#: src/Admin/Menus.php:117
+#: src/Admin/Menus.php:151
 msgid "Settings"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:14
+#: src/Admin/Menus.php:164
+msgid "No permission"
+msgstr ""
+
+#: src/Admin/Menus.php:213
+msgid "Logs per page"
+msgstr ""
+
+#: src/Admin/Menus.php:247
+#: src/Logger/LogsTable.php:107
+msgid "Date"
+msgstr ""
+
+#: src/Admin/Menus.php:248
+#: src/Logger/LogsTable.php:108
+#: src/Logger/LogsTable.php:178
+msgid "Event"
+msgstr ""
+
+#: src/Admin/Menus.php:249
+#: src/Logger/LogsTable.php:109
+msgid "Direction"
+msgstr ""
+
+#: src/Admin/Menus.php:250
+#: src/Logger/LogsTable.php:110
+msgid "User Email"
+msgstr ""
+
+#: src/Admin/Menus.php:251
+msgid "Source Site"
+msgstr ""
+
+#: src/Admin/Menus.php:252
+msgid "Target Site"
+msgstr ""
+
+#: src/Admin/Menus.php:253
+#: src/Logger/LogsTable.php:113
+msgid "Status"
+msgstr ""
+
+#: src/Admin/Menus.php:254
+#: src/Logger/LogsTable.php:114
+msgid "Message"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Backup.php:27
 msgid "Site Title one"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:17
+#: src/Admin/Settings/Sections/Backup.php:30
 msgid "Enter your site title."
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:20
+#: src/Admin/Settings/Sections/Backup.php:33
 msgid "Tagline"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:23
+#: src/Admin/Settings/Sections/Backup.php:36
 msgid "Short description of your site."
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:28
-#: src/Admin/Settings/Sections/Integrations.php:10
+#: src/Admin/Settings/Sections/Backup.php:41
+#: src/Admin/Settings/Sections/Integrations.php:25
 msgid "Integrations"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:33
+#: src/Admin/Settings/Sections/Backup.php:46
 msgid "Google Analytics ID"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:36
+#: src/Admin/Settings/Sections/Backup.php:49
 msgid "Format: G-XXXXXXXXXX"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:40
+#: src/Admin/Settings/Sections/Backup.php:53
 msgid "GTM Container ID"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:43
+#: src/Admin/Settings/Sections/Backup.php:56
 msgid "Format: GTM-XXXXXX"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:47
+#: src/Admin/Settings/Sections/Backup.php:60
 msgid "Facebook Pixel ID"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:53
+#: src/Admin/Settings/Sections/Backup.php:66
 msgid "Facebook App Key"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:59
+#: src/Admin/Settings/Sections/Backup.php:72
 msgid "SMTP Host"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:65
+#: src/Admin/Settings/Sections/Backup.php:78
 msgid "SMTP Port"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:73
+#: src/Admin/Settings/Sections/Backup.php:86
 msgid "SMTP Username"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:79
+#: src/Admin/Settings/Sections/Backup.php:92
 msgid "SMTP Password"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:85
+#: src/Admin/Settings/Sections/Backup.php:98
 msgid "SMTP Encryption"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:89
+#: src/Admin/Settings/Sections/Backup.php:102
 msgid "None"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:96
+#: src/Admin/Settings/Sections/Backup.php:109
 msgid "reCAPTCHA Site Key"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:102
+#: src/Admin/Settings/Sections/Backup.php:115
 msgid "reCAPTCHA Secret"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:108
+#: src/Admin/Settings/Sections/Backup.php:121
 msgid "Stripe Publishable Key"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:114
+#: src/Admin/Settings/Sections/Backup.php:127
 msgid "Stripe Secret Key"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:120
+#: src/Admin/Settings/Sections/Backup.php:133
 msgid "Stripe Mode"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:124
+#: src/Admin/Settings/Sections/Backup.php:137
 msgid "Test"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:125
+#: src/Admin/Settings/Sections/Backup.php:138
 msgid "Live"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:130
+#: src/Admin/Settings/Sections/Backup.php:143
 msgid "Google Maps API Key"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:136
+#: src/Admin/Settings/Sections/Backup.php:149
 msgid "Social Platforms"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:149
+#: src/Admin/Settings/Sections/Backup.php:162
 msgid "Webhook URL"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:152
+#: src/Admin/Settings/Sections/Backup.php:165
 msgid "Receives POST on events."
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:156
+#: src/Admin/Settings/Sections/Backup.php:169
 msgid "Webhook Events"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:160
+#: src/Admin/Settings/Sections/Backup.php:173
 msgid "User Register"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:161
+#: src/Admin/Settings/Sections/Backup.php:174
 msgid "New Order"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:162
+#: src/Admin/Settings/Sections/Backup.php:175
 msgid "Post Publish"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:167
+#: src/Admin/Settings/Sections/Backup.php:180
 msgid "Integration Notes"
 msgstr ""
 
-#: src/Admin/Settings/Sections/back.php:174
+#: src/Admin/Settings/Sections/Backup.php:187
 msgid "Enable Zapier"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:14
+#: src/Admin/Settings/Sections/Configuration.php:38
 msgid "Sync Roles"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:17
+#: src/Admin/Settings/Sections/Configuration.php:41
 msgid "Select roles to sync…"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:18
+#: src/Admin/Settings/Sections/Configuration.php:42
 msgid "Only users with these roles will be synchronised. Leave empty to sync all roles."
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:22
+#: src/Admin/Settings/Sections/Configuration.php:46
 msgid "Sync Meta Keys"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:25
+#: src/Admin/Settings/Sections/Configuration.php:49
 msgid "Select meta keys to sync…"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:26
+#: src/Admin/Settings/Sections/Configuration.php:50
 msgid "Choose which user meta fields to include in the sync payload."
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:30
+#: src/Admin/Settings/Sections/Configuration.php:54
 msgid "Sync Direction"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:33
+#: src/Admin/Settings/Sections/Configuration.php:57
 msgid "Push sends data from this site; Pull fetches from remotes."
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:35
+#: src/Admin/Settings/Sections/Configuration.php:59
 msgid "Push  (this site → remotes)"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:36
+#: src/Admin/Settings/Sections/Configuration.php:60
 msgid "Pull  (remotes → this site)"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:37
+#: src/Admin/Settings/Sections/Configuration.php:61
 msgid "Both"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:41
+#: src/Admin/Settings/Sections/Configuration.php:65
 msgid "Sync Trigger"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:44
+#: src/Admin/Settings/Sections/Configuration.php:68
 msgid "Select triggers…"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:45
+#: src/Admin/Settings/Sections/Configuration.php:69
 msgid "Events that trigger an automatic sync."
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:47
+#: src/Admin/Settings/Sections/Configuration.php:71
 msgid "User Registered"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:48
+#: src/Admin/Settings/Sections/Configuration.php:72
 msgid "Profile Updated"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:49
+#: src/Admin/Settings/Sections/Configuration.php:73
 msgid "User Deleted"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:50
+#: src/Admin/Settings/Sections/Configuration.php:74
 msgid "Role Changed"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:51
+#: src/Admin/Settings/Sections/Configuration.php:75
 msgid "User Login"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:55
+#: src/Admin/Settings/Sections/Configuration.php:79
 msgid "Conflict Strategy"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:58
+#: src/Admin/Settings/Sections/Configuration.php:82
 msgid "What to do when the same user exists on both sites with different data."
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:60
+#: src/Admin/Settings/Sections/Configuration.php:84
 msgid "Source always wins"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:61
+#: src/Admin/Settings/Sections/Configuration.php:85
 msgid "Target always wins"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:62
+#: src/Admin/Settings/Sections/Configuration.php:86
 msgid "Most recently modified wins"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:63
+#: src/Admin/Settings/Sections/Configuration.php:87
 msgid "Skip — do not overwrite"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:69
+#: src/Admin/Settings/Sections/Configuration.php:91
 msgid "Role Fallback"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:72
+#: src/Admin/Settings/Sections/Configuration.php:94
 msgid "Assign this role when the user's original role does not exist on the target site."
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:74
+#: src/Admin/Settings/Sections/Configuration.php:96
 msgid "Subscriber (recommended)"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:75
+#: src/Admin/Settings/Sections/Configuration.php:97
 msgid "Contributor"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:76
+#: src/Admin/Settings/Sections/Configuration.php:98
 msgid "Author"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:77
+#: src/Admin/Settings/Sections/Configuration.php:99
 msgid "Editor"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:78
+#: src/Admin/Settings/Sections/Configuration.php:100
 msgid "Skip — do not sync this user"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:79
+#: src/Admin/Settings/Sections/Configuration.php:101
 msgid "Sync without a role"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:84
+#: src/Admin/Settings/Sections/Configuration.php:105
 msgid "Role Map"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:87
+#: src/Admin/Settings/Sections/Configuration.php:108
 msgid "Add Mapping"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:88
+#: src/Admin/Settings/Sections/Configuration.php:109
 msgid "Map a source role to a different role on the target site when the original does not exist."
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:91
+#: src/Admin/Settings/Sections/Configuration.php:112
 msgid "Source Role"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:93
+#: src/Admin/Settings/Sections/Configuration.php:114
 msgid "e.g. shop_manager"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:96
+#: src/Admin/Settings/Sections/Configuration.php:117
 msgid "Target Role"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:98
+#: src/Admin/Settings/Sections/Configuration.php:119
 msgid "e.g. editor"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:103
+#: src/Admin/Settings/Sections/Configuration.php:124
 msgid "Batch Size"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:109
+#: src/Admin/Settings/Sections/Configuration.php:130
 msgid "Number of users processed per sync request."
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:112
+#: src/Admin/Settings/Sections/Configuration.php:133
 msgid "Enable Logging"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Configuration.php:115
+#: src/Admin/Settings/Sections/Configuration.php:136
 msgid "Write sync activity to the error log"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Integrations.php:15
+#: src/Admin/Settings/Sections/Configuration.php:150
+msgid "&mdash; No role for this site &mdash;"
+msgstr ""
+
+#: src/Admin/Settings/Sections/Integrations.php:40
 msgid "Secret Key"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Setup.php:10
+#: src/Admin/Settings/Sections/Setup.php:25
 msgid "Setup"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Setup.php:14
+#: src/Admin/Settings/Sections/Setup.php:40
 msgid "Enable Sync"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Setup.php:19
+#: src/Admin/Settings/Sections/Setup.php:45
 msgid "Target Sites"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Setup.php:22
+#: src/Admin/Settings/Sections/Setup.php:48
 msgid "Add Site"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Setup.php:23
+#: src/Admin/Settings/Sections/Setup.php:49
 msgid "Add each remote WordPress site to sync users to."
 msgstr ""
 
-#: src/Admin/Settings/Sections/Setup.php:26
+#: src/Admin/Settings/Sections/Setup.php:52
 msgid "Label"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Setup.php:28
+#: src/Admin/Settings/Sections/Setup.php:54
 msgid "Site Name"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Setup.php:31
+#: src/Admin/Settings/Sections/Setup.php:57
 msgid "URL"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Setup.php:36
+#: src/Admin/Settings/Sections/Setup.php:62
 msgid "Active"
 msgstr ""
 
-#: src/Admin/Settings/Sections/Setup.php:40
+#: src/Admin/Settings/Sections/Setup.php:66
 msgid "Sign-On"
 msgstr ""
 
-#: src/Admin/Settings/Settings.php:290
+#: src/Admin/Settings/Settings.php:524
 msgid "Enable"
 msgstr ""
 
-#: src/Admin/Settings/Settings.php:350
-#: src/Admin/Settings/Settings.php:371
+#: src/Admin/Settings/Settings.php:611
+#: src/Admin/Settings/Settings.php:639
 msgid "Select options..."
 msgstr ""
 
-#: src/Admin/Settings/Settings.php:472
+#: src/Admin/Settings/Settings.php:794
 msgid "Upload Image"
 msgstr ""
 
-#: src/Admin/Settings/Settings.php:480
+#: src/Admin/Settings/Settings.php:803
 msgid "Remove"
 msgstr ""
 
-#: src/Admin/Settings/Settings.php:510
+#: src/Admin/Settings/Settings.php:851
 msgid "Add Row"
 msgstr ""
 
-#: src/Admin/Settings/Settings.php:605
+#: src/Admin/Settings/Settings.php:945
 msgid "Permission denied."
 msgstr ""
 
-#: src/Admin/Settings/Settings.php:611
+#: src/Admin/Settings/Settings.php:951
 msgid "Invalid section."
 msgstr ""
 
@@ -495,142 +547,171 @@ msgstr ""
 msgid "Unserializing a singleton is not allowed."
 msgstr ""
 
-#: src/Sync/LogPage.php:29
-msgid "You do not have permission to prune sync logs."
+#. translators: %d: Number of logs.
+#: src/Logger/LogsTable.php:62
+#, php-format
+msgid "All (%d)"
 msgstr ""
 
-#: src/Sync/LogPage.php:70
-msgid "Log page template not found."
+#. translators: %d: Number of successful logs.
+#: src/Logger/LogsTable.php:72
+#, php-format
+msgid "Success (%d)"
 msgstr ""
+
+#. translators: %d: Number of error logs.
+#: src/Logger/LogsTable.php:82
+#, php-format
+msgid "Error (%d)"
+msgstr ""
+
+#. translators: %d: Number of trashed logs.
+#: src/Logger/LogsTable.php:92
+#, php-format
+msgid "Trash (%d)"
+msgstr ""
+
+#: src/Logger/LogsTable.php:111
+msgid "Source"
+msgstr ""
+
+#: src/Logger/LogsTable.php:112
+msgid "Target"
+msgstr ""
+
+#: src/Logger/LogsTable.php:160
+msgid "All directions"
+msgstr ""
+
+#: src/Logger/LogsTable.php:162
+msgid "Outgoing"
+msgstr ""
+
+#: src/Logger/LogsTable.php:164
+msgid "Incoming"
+msgstr ""
+
+#: src/Logger/LogsTable.php:169
+msgid "All statuses"
+msgstr ""
+
+#: src/Logger/LogsTable.php:171
+msgid "Success"
+msgstr ""
+
+#: src/Logger/LogsTable.php:173
+msgid "Error"
+msgstr ""
+
+#: src/Logger/LogsTable.php:180
+msgid "Filter"
+msgstr ""
+
+#. translators: 1: Log date, 2: Log time.
+#: src/Logger/LogsTable.php:223
+#, php-format
+msgid "%1$s at %2$s"
+msgstr ""
+
+#: src/Logger/LogsTable.php:224
+msgid "Y/m/d"
+msgstr ""
+
+#: src/Logger/LogsTable.php:225
+msgid "g:i a"
+msgstr ""
+
+#: src/Logger/LogsTable.php:271
+msgid "View payload"
+msgstr ""
+
+#: src/Logger/LogsTable.php:277
+msgid "Delete this log entry? This cannot be undone."
+msgstr ""
+
+#: src/Logger/LogsTable.php:278
+msgid "Delete"
+msgstr ""
+
+#: src/Logger/LogsTable.php:295
+msgid "Restore"
+msgstr ""
+
+#: src/Logger/LogsTable.php:296
+#: src/Logger/LogsTable.php:302
+msgid "Delete Permanently"
+msgstr ""
+
+#: src/Logger/LogsTable.php:301
+msgid "Move to Trash"
+msgstr ""
+
+#: src/Logger/LogsTable.php:322
+msgid "You do not have permission to do this."
+msgstr ""
+
+#. translators: %d: Number of log entries moved to Trash.
+#: src/Logger/LogsTable.php:415
+#, php-format
+msgid "%d log entry moved to Trash."
+msgid_plural "%d log entries moved to Trash."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: Number of log entries restored.
+#: src/Logger/LogsTable.php:425
+#, php-format
+msgid "%d log entry restored."
+msgid_plural "%d log entries restored."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: Number of log entries permanently deleted.
+#: src/Logger/LogsTable.php:435
+#, php-format
+msgid "%d log entry permanently deleted."
+msgid_plural "%d log entries permanently deleted."
+msgstr[0] ""
+msgstr[1] ""
 
 #. Translators: %s: Plugin version.
-#: templates/admin/page.php:24
+#: templates/admin/page.php:30
 #, php-format
 msgid "V %s"
 msgstr ""
 
-#: templates/admin/page.php:37
+#: templates/admin/page.php:43
 msgid "Settings saved successfully."
 msgstr ""
 
-#: templates/admin/page.php:49
+#: templates/admin/page.php:55
 msgid "Page not found."
 msgstr ""
 
-#: templates/admin/pages/configuration.php:40
+#: templates/admin/pages/logs.php:50
+msgid "Search Log"
+msgstr ""
+
+#: templates/admin/pages/setup.php:27
 msgid "Save Changes"
 msgstr ""
 
-#: templates/admin/pages/configuration.php:48
+#: templates/admin/pages/setup.php:35
 msgid "Reset Default"
 msgstr ""
 
-#: templates/admin/pages/logs.php:15
-msgid "User Sync Log"
-msgstr ""
-
-#. Translators: 1: Number of deleted log rows, 2: Number of days.
-#: templates/admin/pages/logs.php:25
-#, php-format
-msgid "Pruned %1$d log rows older than %2$d days."
-msgstr ""
-
-#: templates/admin/pages/logs.php:38
-msgid "All Events"
-msgstr ""
-
-#: templates/admin/pages/logs.php:47
-msgid "Both Directions"
-msgstr ""
-
-#: templates/admin/pages/logs.php:49
-msgid "Outgoing"
-msgstr ""
-
-#: templates/admin/pages/logs.php:52
-msgid "Incoming"
-msgstr ""
-
-#: templates/admin/pages/logs.php:57
-msgid "All Statuses"
-msgstr ""
-
-#: templates/admin/pages/logs.php:59
-msgid "Success"
-msgstr ""
-
-#: templates/admin/pages/logs.php:62
-msgid "Error"
-msgstr ""
-
-#: templates/admin/pages/logs.php:69
-msgid "Filter by email"
-msgstr ""
-
-#: templates/admin/pages/logs.php:76
-msgid "Filter by site URL"
-msgstr ""
-
-#: templates/admin/pages/logs.php:84
-msgid "Filter"
-msgstr ""
-
-#: templates/admin/pages/logs.php:88
-msgid "Reset"
-msgstr ""
-
-#: templates/admin/pages/logs.php:94
-msgid "No log entries found."
-msgstr ""
-
-#: templates/admin/pages/logs.php:101
-msgid "ID"
-msgstr ""
-
-#: templates/admin/pages/logs.php:102
-msgid "Event"
-msgstr ""
-
-#: templates/admin/pages/logs.php:103
-msgid "Direction"
-msgstr ""
-
-#: templates/admin/pages/logs.php:104
-msgid "User"
-msgstr ""
-
-#: templates/admin/pages/logs.php:105
-msgid "From"
-msgstr ""
-
-#: templates/admin/pages/logs.php:106
-msgid "To"
-msgstr ""
-
-#: templates/admin/pages/logs.php:107
-msgid "Status"
-msgstr ""
-
-#: templates/admin/pages/logs.php:108
-msgid "Message"
-msgstr ""
-
-#: templates/admin/pages/logs.php:109
-msgid "Time (UTC)"
-msgstr ""
-
-#: templates/admin/pages/logs.php:110
+#: assets/src/js/backend.js:343
 msgid "Payload"
 msgstr ""
 
-#: templates/admin/pages/logs.php:175
-msgid "Prune Old Logs"
+#: assets/src/js/backend.js:347
+msgid "Close"
 msgstr ""
 
-#: templates/admin/pages/logs.php:182
-msgid "Delete entries older than"
+#: assets/src/js/backend.js:351
+msgid "OK"
 msgstr ""
 
-#: templates/admin/pages/logs.php:187
-msgid "Prune Now"
+#: assets/src/js/backend.js:452
+msgid "Delete the selected log entries? This cannot be undone."
 msgstr ""
