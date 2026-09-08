@@ -1,8 +1,8 @@
 {
-  "name": "wordpress-plugin",
-  "version": "0.1.0",
+  "name": "entire-plugin",
+  "version": "1.0.0",
   "description": "A custom WordPress plugin using @wordpress/scripts with frontend and backend assets.",
-  "author": "The WordPress Contributors",
+  "author": "Birendra Maharjan <brendra8917@gmail.com>",
   "license": "GPL-2.0-or-later",
   "scripts": {
     "build": "wp-scripts build",

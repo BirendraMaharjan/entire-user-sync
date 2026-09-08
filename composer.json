@@ -1,6 +1,6 @@
 {
-    "name": "wpplugin/entire-account-manager",
-    "description": "Professional WordPress Plugin for Course Enrollment and Synchronization",
+    "name": "entire-plugin/entire-composer",
+    "description": "WordPress Plugin composer.json file for Entire plugin",
     "version": "1.0.0",
     "minimum-stability": "stable",
     "prefer-stable": true,
@@ -29,7 +29,7 @@
             "@static-analysis",
             "@tests"
         ],
-        "make-pot": "./vendor/bin/wp i18n make-pot . languages/$(basename \"$PWD\").pot --exclude=node_modules,vendor,tests,coverage,.git,assets/build"
+        "make-pot": "./vendor/bin/wp i18n make-pot . languages/entire-user-sync.pot --exclude=node_modules,vendor,tests,coverage,.git,assets/build"
     },
     "require-dev": {
         "mockery/mockery": "^1.6",
